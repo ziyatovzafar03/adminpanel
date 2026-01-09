@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, ChevronRight, Home, Search, ShieldAlert, Loader2, Package, WifiOff, RefreshCcw, LayoutGrid, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { Plus, ChevronRight, Home, Search, ShieldAlert, Package, LayoutGrid, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { apiService } from './api';
 import { DEFAULT_CHAT_ID } from './consts';
 import { Category, Product, UserAuthData } from './types';
@@ -13,7 +13,7 @@ import { ConfirmModal } from './components/ConfirmModal';
 import { Notification, NotificationType } from './components/Notification';
 
 const App: React.FC = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme] = useState<'light' | 'dark'>('dark');
   const [authStatus, setAuthStatus] = useState<'loading' | 'authorized' | 'unauthorized' | 'error'>('loading');
   const [currentUser, setCurrentUser] = useState<UserAuthData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -36,10 +36,9 @@ const App: React.FC = () => {
   const breadcrumbRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    const activeTheme = savedTheme || 'light';
-    setTheme(activeTheme);
-    document.documentElement.classList.toggle('dark', activeTheme === 'dark');
+    // Always force dark mode
+    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('light');
   }, []);
 
   useEffect(() => {
@@ -48,13 +47,6 @@ const App: React.FC = () => {
 
   const showNotification = (message: string, type: NotificationType = 'success') => {
     setNotification({ isVisible: true, message, type });
-  };
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   useEffect(() => {
@@ -144,8 +136,6 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       let productId = '';
-      
-      // 1. Create or Update basic product info
       if (editingProduct) {
         productId = editingProduct.id;
         const editRequest = {
@@ -157,19 +147,14 @@ const App: React.FC = () => {
         };
         await apiService.updateProduct(productId, editRequest);
       } else {
-        // When creating, we send the whole object. The API should handle basic fields.
         const createRes = await apiService.createProduct({ ...data, types: [] });
         productId = createRes.data.id;
       }
 
-      // 2. Handle Variants (Types) Sync
       if (productId && data.types && data.types.length > 0) {
         for (const type of data.types) {
           const isNew = type._isNew || !type.id || type.id.toString().startsWith('temp-');
-          
           if (isNew) {
-            // POST /api/product/add-product-type
-            // Request: { ..., productId: "..." }
             await apiService.addProductType({
               imgSize: type.imgSize || 0,
               imgName: type.imgName || 'variant.png',
@@ -180,11 +165,9 @@ const App: React.FC = () => {
               nameRu: type.nameRu || type.nameUz,
               price: type.price,
               stock: type.stock,
-              productId: productId // Required for add
+              productId: productId
             });
           } else if (type._isModified) {
-            // PUT /api/product/update-product-type/{id}
-            // Request: { ... } (No productId)
             await apiService.updateProductType(type.id, {
               imgSize: type.imgSize || 0,
               imgName: type.imgName || 'variant.png',
@@ -228,28 +211,33 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    // Redirect to the base path without credentials
+    window.location.href = window.location.origin;
+  };
+
   if (authStatus === 'loading') {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-8">
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-8">
         <div className="relative mb-8">
-          <div className="w-20 h-20 border-4 border-indigo-100 dark:border-indigo-900/30 rounded-full"></div>
+          <div className="w-20 h-20 border-4 border-indigo-900/30 rounded-full"></div>
           <div className="absolute top-0 left-0 w-20 h-20 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-600 animate-pulse">Platformaga kirish...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 animate-pulse">Platformaga kirish...</p>
       </div>
     );
   }
 
   if (authStatus === 'unauthorized') {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
-        <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[3rem] p-10 text-center shadow-2xl border border-slate-200 dark:border-slate-800">
-          <div className="w-24 h-24 mx-auto mb-8 rounded-[2rem] bg-rose-50 dark:bg-rose-950/20 flex items-center justify-center text-rose-500 shadow-lg">
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 text-white">
+        <div className="w-full max-w-sm bg-slate-900 rounded-[3rem] p-10 text-center shadow-2xl border border-slate-800">
+          <div className="w-24 h-24 mx-auto mb-8 rounded-[2rem] bg-rose-950/20 flex items-center justify-center text-rose-500 shadow-lg">
             <ShieldAlert size={48} strokeWidth={2.5} />
           </div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-4">Kirish taqiqlangan</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed mb-8">Sizda ushbu dashboard'dan foydalanish uchun ruxsat yo'q yoki havola eskirgan.</p>
-          <button onClick={() => window.location.reload()} className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all">Qayta urinish</button>
+          <h2 className="text-2xl font-black uppercase tracking-tight mb-4">Kirish taqiqlangan</h2>
+          <p className="text-slate-400 text-sm font-medium leading-relaxed mb-8">Sizda ushbu dashboard'dan foydalanish uchun ruxsat yo'q yoki havola eskirgan.</p>
+          <button onClick={() => window.location.reload()} className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all">Qayta urinish</button>
         </div>
       </div>
     );
@@ -258,29 +246,31 @@ const App: React.FC = () => {
   const filteredCategories = categories.filter(c => c.nameUz.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredProducts = products.filter(p => p.nameUz.toLowerCase().includes(searchQuery.toLowerCase()));
 
+  // Construct full name for header
+  const fullName = currentUser ? `${currentUser.firstname || ''} ${currentUser.lastname || ''}`.trim() : 'Admin';
+
   return (
     <Layout 
       theme={theme} 
-      toggleTheme={toggleTheme} 
-      onLogout={() => window.location.reload()}
-      currentUserFirstName={currentUser?.firstname}
+      onLogout={handleLogout}
+      currentUserName={fullName || 'Admin'}
     >
       <div className="max-w-6xl mx-auto space-y-10 pb-32">
         {/* Navigation & Header */}
         <div className="flex flex-col gap-8">
           <div ref={breadcrumbRef} className="flex items-center gap-3 overflow-x-auto hide-scrollbar py-2 -mx-4 px-4 scroll-smooth">
-            <button onClick={() => navigateTo(null)} className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all shadow-sm active:scale-90">
+            <button onClick={() => navigateTo(null)} className="flex-shrink-0 w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800/50 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all shadow-sm active:scale-90">
               <Home size={20} />
             </button>
             {breadcrumb.map((b, i) => (
               <React.Fragment key={b.id}>
-                <ChevronRight size={14} className="text-slate-300 dark:text-slate-700 flex-shrink-0" />
+                <ChevronRight size={14} className="text-slate-700 flex-shrink-0" />
                 <button 
                   onClick={() => navigateTo(b.id, b.name)}
                   className={`flex-shrink-0 px-6 py-3 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 ${
                     i === breadcrumb.length - 1 
                     ? 'bg-indigo-600 border-indigo-500 text-white' 
-                    : 'bg-white dark:bg-slate-900 border-slate-200/50 dark:border-slate-800/50 text-slate-500'
+                    : 'bg-slate-900 border-slate-800/50 text-slate-500'
                   }`}
                 >
                   {b.name}
@@ -295,10 +285,10 @@ const App: React.FC = () => {
                 {viewMode === 'category' ? <LayoutGrid size={32} /> : <ShoppingBag size={32} />}
               </div>
               <div>
-                <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-1.5">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tight leading-none mb-1.5">
                   {breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Katalog'}
                 </h2>
-                <p className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2">
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
                   {isLoading ? 'Yuklanmoqda...' : `${viewMode === 'category' ? filteredCategories.length : filteredProducts.length} ta element`}
                 </p>
@@ -310,7 +300,7 @@ const App: React.FC = () => {
               <input 
                 type="text"
                 placeholder="Qidirish..."
-                className="w-full pl-14 pr-6 py-5 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 rounded-3xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-sm font-bold shadow-sm"
+                className="w-full pl-14 pr-6 py-5 bg-slate-900/70 backdrop-blur-xl border border-slate-800/50 rounded-3xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-sm font-bold shadow-sm text-white"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -322,7 +312,7 @@ const App: React.FC = () => {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-80 bg-white/40 dark:bg-slate-900/40 border border-slate-200/30 dark:border-slate-800/30 rounded-[3rem] animate-pulse"></div>
+              <div key={i} className="h-80 bg-slate-900/40 border border-slate-800/30 rounded-[3rem] animate-pulse"></div>
             ))}
           </div>
         ) : (
@@ -340,33 +330,31 @@ const App: React.FC = () => {
         )}
 
         {(viewMode === 'category' ? filteredCategories.length === 0 : filteredProducts.length === 0) && !isLoading && (
-          <div className="flex flex-col items-center justify-center py-32 text-center bg-white/30 dark:bg-slate-900/30 border-2 border-dashed border-slate-200/50 dark:border-slate-800/50 rounded-[4rem]">
-            <Package size={80} strokeWidth={1} className="text-slate-300 dark:text-slate-800 mb-8" />
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Hech narsa topilmadi</h3>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Yangi ma'lumot qo'shish uchun + tugmasini bosing</p>
+          <div className="flex flex-col items-center justify-center py-32 text-center bg-slate-900/30 border-2 border-dashed border-slate-800/50 rounded-[4rem]">
+            <Package size={80} strokeWidth={1} className="text-slate-800 mb-8" />
+            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Hech narsa topilmadi</h3>
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest italic">Yangi ma'lumot qo'shish uchun + tugmasini bosing</p>
           </div>
         )}
       </div>
 
-      {/* Fixed Action Button (FAB) */}
       <button 
         onClick={() => {
           if (viewMode === 'category') { setEditingCategory(null); setIsCategoryModalOpen(true); }
           else { setEditingProduct(null); setIsProductModalOpen(true); }
         }}
-        className="fixed bottom-10 right-8 w-20 h-20 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[2.25rem] flex items-center justify-center shadow-2xl active:scale-90 active:rotate-12 transition-all z-[150] border-4 border-white dark:border-slate-950 group"
+        className="fixed bottom-10 right-8 w-20 h-20 bg-white text-slate-900 rounded-[2.25rem] flex items-center justify-center shadow-2xl active:scale-90 active:rotate-12 transition-all z-[150] border-4 border-slate-950 group"
       >
         <Plus size={36} strokeWidth={3} className="group-hover:scale-110 transition-transform" />
       </button>
 
-      {/* Back Button */}
       {breadcrumb.length > 0 && (
         <button 
           onClick={() => {
             const parent = breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2] : { id: null, name: 'Asosiy' };
             navigateTo(parent.id, parent.name);
           }}
-          className="fixed bottom-10 left-8 w-16 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-slate-900 dark:text-white rounded-[1.75rem] flex items-center justify-center shadow-xl border border-slate-200/50 dark:border-slate-800/50 active:scale-90 z-[150]"
+          className="fixed bottom-10 left-8 w-16 h-16 bg-slate-900/80 backdrop-blur-xl text-white rounded-[1.75rem] flex items-center justify-center shadow-xl border border-slate-800/50 active:scale-90 z-[150]"
         >
           <ArrowLeft size={24} strokeWidth={2.5} />
         </button>
