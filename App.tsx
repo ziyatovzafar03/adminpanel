@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowLeft, Search, ShieldAlert, Loader2, Sparkles, LayoutGrid } from 'lucide-react';
+import { Plus, ArrowLeft, Search, ShieldAlert, Loader2, Sparkles, LayoutGrid, WifiOff } from 'lucide-react';
 import { apiService } from './api';
 import { Category, UserAuthData } from './types';
 import { Layout } from './components/Layout';
@@ -11,7 +11,8 @@ const DEFAULT_CHAT_ID = '7882316826';
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [authStatus, setAuthStatus] = useState<'loading' | 'authorized' | 'unauthorized'>('loading');
+  const [authStatus, setAuthStatus] = useState<'loading' | 'authorized' | 'unauthorized' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<UserAuthData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
@@ -43,17 +44,21 @@ const App: React.FC = () => {
         const chatId = urlParams.get('chat_id') || DEFAULT_CHAT_ID;
         
         const response = await apiService.fetchUserByChatId(chatId);
+        
+        // API formatiga qarab ma'lumotni olish
         const userData = response.success ? response.data : (response as any);
 
-        if (userData && userData.status === 'CONFIRMED') {
+        if (userData && (userData.status === 'CONFIRMED' || userData.exists === true)) {
           setCurrentUser(userData);
           setAuthStatus('authorized');
           loadCategories(null);
         } else {
           setAuthStatus('unauthorized');
         }
-      } catch (err) {
-        setAuthStatus('unauthorized');
+      } catch (err: any) {
+        console.error("Auth process error:", err);
+        setErrorMessage(err.message || "Serverga ulanib bo'lmadi");
+        setAuthStatus('error');
       }
     };
 
@@ -134,7 +139,30 @@ const App: React.FC = () => {
           <Loader2 className="absolute inset-0 m-auto text-indigo-600 dark:text-indigo-400 animate-pulse" size={40} />
         </div>
         <h2 className="text-2xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent mb-2 tracking-tighter">Shop Admin Pro</h2>
-        <p className="text-slate-400 text-sm font-black uppercase tracking-widest">Xavfsiz ulanish tekshirilmoqda...</p>
+        <p className="text-slate-400 text-sm font-black uppercase tracking-widest">Ma'lumotlar yuklanmoqda...</p>
+      </div>
+    );
+  }
+
+  if (authStatus === 'error') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-950 text-center">
+        <div className="w-28 h-28 rounded-[3rem] bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-500 mb-8 shadow-2xl border-2 border-amber-100 dark:border-amber-900/50">
+          <WifiOff size={56} />
+        </div>
+        <h1 className="text-3xl font-black mb-4 tracking-tight">Ulanish xatosi</h1>
+        <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-4 text-xl leading-relaxed">
+          Backend serverga (ngrok) ulanib bo'lmadi.
+        </p>
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-2xl mb-8 font-mono text-sm">
+          {errorMessage}
+        </div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-12 py-5 bg-indigo-600 text-white rounded-[2rem] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 text-lg"
+        >
+          Qayta yuklash
+        </button>
       </div>
     );
   }
@@ -147,7 +175,7 @@ const App: React.FC = () => {
         </div>
         <h1 className="text-4xl font-black mb-4 tracking-tight">Ruxsat yo'q</h1>
         <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-12 text-xl leading-relaxed">
-          Ushbu do'kon boshqaruv paneliga kirish uchun administrator ruxsati (CONFIRMED) talab qilinadi.
+          Sizda ushbu panelga kirish huquqi yo'q yoki <code className="bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded">chat_id</code> noto'g'ri.
         </p>
         <button 
           onClick={() => window.location.reload()}
