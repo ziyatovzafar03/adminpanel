@@ -1,5 +1,5 @@
 {
-  "name": "Category Admin Pro",
-  "description": "A high-end, mobile-responsive admin dashboard for managing multi-level categories with multi-language support and secure chat_id authentication.",
+  "name": "Category Admin Pro v2",
+  "description": "Enterprise-grade mobile-first admin panel for categories. Features custom modal systems, AI auto-fill, and high-performance UX without browser alerts.",
   "requestFramePermissions": []
 }

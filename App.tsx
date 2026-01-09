@@ -6,13 +6,14 @@ import { Category, UserAuthData } from './types';
 import { Layout } from './components/Layout';
 import { CategoryCard } from './components/CategoryCard';
 import { CategoryModal } from './components/CategoryModal';
+import { ConfirmModal } from './components/ConfirmModal';
+import { Notification, NotificationType } from './components/Notification';
 
 const DEFAULT_CHAT_ID = '7882316826';
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [authStatus, setAuthStatus] = useState<'loading' | 'authorized' | 'unauthorized' | 'error'>('loading');
-  const [errorMessage, setErrorMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<UserAuthData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
@@ -21,6 +22,15 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Custom Alert/Confirm States
+  const [confirmState, setConfirmState] = useState<{isOpen: boolean, id: string | null}>({ isOpen: false, id: null });
+  const [notification, setNotification] = useState<{isVisible: boolean, message: string, type: NotificationType}>({
+    isVisible: false,
+    message: '',
+    type: 'success'
+  });
+
   const breadcrumbRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,6 +46,10 @@ const App: React.FC = () => {
     }
   }, [breadcrumb]);
 
+  const showNotification = (message: string, type: NotificationType = 'success') => {
+    setNotification({ isVisible: true, message, type });
+  };
+
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
@@ -46,11 +60,14 @@ const App: React.FC = () => {
   useEffect(() => {
     const initApp = async () => {
       try {
-        const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'admin');
-        const pathChatId = pathSegments[0];
         const urlParams = new URLSearchParams(window.location.search);
         const queryChatId = urlParams.get('chat_id');
-        const chatId = pathChatId || queryChatId || DEFAULT_CHAT_ID;
+        
+        // Also check if it's baseUrl/{chat_id}
+        const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'admin');
+        const pathChatId = pathSegments[0];
+        
+        const chatId = queryChatId || pathChatId || DEFAULT_CHAT_ID;
         
         const response = await apiService.fetchUserByChatId(chatId);
         const userData = response.success ? response.data : (response as any);
@@ -63,7 +80,6 @@ const App: React.FC = () => {
           setAuthStatus('unauthorized');
         }
       } catch (err: any) {
-        setErrorMessage(err.message || "Internet bilan aloqa yo'q");
         setAuthStatus('error');
       }
     };
@@ -80,7 +96,7 @@ const App: React.FC = () => {
         setCategories(response.data.sort((a, b) => a.orderIndex - b.orderIndex));
       }
     } catch (err) {
-      console.error(err);
+      showNotification("Kategoriyalarni yuklashda xatolik", "error");
     } finally {
       setIsLoading(false);
     }
@@ -110,9 +126,29 @@ const App: React.FC = () => {
         setIsModalOpen(false);
         setEditingCategory(null);
         loadCategories(currentParentId);
+        showNotification(editingCategory ? "Kategoriya yangilandi" : "Kategoriya yaratildi", "success");
+      } else {
+        showNotification("Saqlashda xatolik yuz berdi", "error");
       }
     } catch (err) {
-      alert("Xatolik yuz berdi");
+      showNotification("Tizimda xatolik", "error");
+    }
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!confirmState.id) return;
+    try {
+      const res = await apiService.deleteCategory(confirmState.id);
+      if (res.success) {
+        loadCategories(currentParentId);
+        showNotification("Kategoriya o'chirildi", "success");
+      } else {
+        showNotification("O'chirishda xatolik yuz berdi", "error");
+      }
+    } catch (err) {
+      showNotification("Xatolik: Tarmoq bilan muammo", "error");
+    } finally {
+      setConfirmState({ isOpen: false, id: null });
     }
   };
 
@@ -128,7 +164,7 @@ const App: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-indigo-600 animate-spin"></div>
             <div className="absolute inset-0 w-12 h-12 rounded-2xl bg-indigo-600 animate-ping opacity-20"></div>
           </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Yuklanmoqda</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Dashboardga ulanilmoqda</p>
         </div>
       </div>
     );
@@ -137,16 +173,19 @@ const App: React.FC = () => {
   if (authStatus === 'error') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-mesh text-center">
-        <div className="w-20 h-20 bg-rose-500/10 text-rose-500 rounded-[1.5rem] flex items-center justify-center mb-6">
-          <WifiOff size={40} />
+        <div className="w-24 h-24 bg-rose-500/10 text-rose-500 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-rose-500/5">
+          <WifiOff size={48} />
         </div>
-        <h1 className="text-2xl font-black mb-2 uppercase">Xatolik</h1>
-        <p className="text-slate-500 text-sm mb-8 leading-relaxed max-w-xs">{errorMessage}</p>
+        <h1 className="text-3xl font-black mb-4 uppercase tracking-tight">Tarmoq Xatosi</h1>
+        <p className="text-slate-500 text-sm mb-10 leading-relaxed max-w-xs uppercase font-bold tracking-widest">Internet aloqasini tekshiring yoki serverni yangilang</p>
         <button 
           onClick={() => window.location.reload()} 
-          className="w-full max-w-xs py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+          className="w-full max-w-xs py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.75rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all"
         >
-          Qayta urinish
+          <div className="flex items-center justify-center gap-2">
+            <RefreshCcw size={16} />
+            Qayta urinish
+          </div>
         </button>
       </div>
     );
@@ -155,27 +194,31 @@ const App: React.FC = () => {
   if (authStatus === 'unauthorized') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-mesh text-center">
-        <div className="w-20 h-20 bg-amber-500/10 text-amber-500 rounded-[1.5rem] flex items-center justify-center mb-6">
-          <ShieldAlert size={40} />
+        <div className="w-24 h-24 bg-amber-500/10 text-amber-500 rounded-[2.5rem] flex items-center justify-center mb-8">
+          <ShieldAlert size={48} />
         </div>
-        <h1 className="text-2xl font-black mb-2 uppercase">Ruxsat yo'q</h1>
-        <p className="text-slate-500 text-sm mb-8 leading-relaxed">Sizning chat ID tizimda ro'yxatdan o'tmagan.</p>
-        <button onClick={() => window.location.href = '/'} className="w-full max-w-xs py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Bosh sahifaga qaytish</button>
+        <h1 className="text-3xl font-black mb-4 uppercase tracking-tight">Ruxsat Berilmadi</h1>
+        <p className="text-slate-500 text-sm mb-10 leading-relaxed uppercase font-bold tracking-widest">Sizning Chat ID tizimda tasdiqlanmagan</p>
+        <button onClick={() => window.location.href = '/'} className="w-full max-w-xs py-5 bg-indigo-600 text-white rounded-[1.75rem] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/20 active:scale-95 transition-all">Bosh sahifaga qaytish</button>
       </div>
     );
   }
 
   return (
     <Layout theme={theme} toggleTheme={toggleTheme} onLogout={() => window.location.reload()} currentUserFirstName={currentUser?.firstname}>
-      <div className="flex flex-col gap-6 sm:gap-8 max-w-5xl mx-auto">
+      <Notification 
+        {...notification} 
+        onClose={() => setNotification(prev => ({ ...prev, isVisible: false }))} 
+      />
+
+      <div className="flex flex-col gap-6 sm:gap-8 max-w-6xl mx-auto">
         <div className="flex flex-col gap-6">
-          {/* Breadcrumbs - Native Mobile Feel */}
           <div ref={breadcrumbRef} className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-2 -mx-4 px-4 scroll-smooth">
             <button 
               onClick={() => navigateTo(null)} 
-              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest whitespace-nowrap shadow-sm"
             >
-              <Home size={14} />
+              <Home size={14} strokeWidth={2.5} />
               Root
             </button>
             {breadcrumb.map((b, i) => (
@@ -183,7 +226,7 @@ const App: React.FC = () => {
                 <ChevronRight size={14} className="text-slate-300 dark:text-slate-700 flex-shrink-0" />
                 <button 
                   onClick={() => navigateTo(b.id, b.name)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest active:scale-95 ${
+                  className={`flex-shrink-0 px-5 py-3 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest active:scale-95 shadow-sm ${
                     i === breadcrumb.length - 1 
                     ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/20' 
                     : 'bg-white dark:bg-slate-900 border-slate-200/50 dark:border-slate-800/50 text-slate-500 hover:text-indigo-600'
@@ -196,26 +239,31 @@ const App: React.FC = () => {
           </div>
           
           <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-indigo-600 text-white rounded-[1.25rem] shadow-soft-glow">
-                <LayoutGrid size={24} />
-              </div>
-              <div>
-                <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                  {breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Bo\'limlar'}
-                </h2>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {isLoading ? 'Yangilanmoqda' : `${categories.length} ta element topildi`}
-                </p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-[1.5rem] flex items-center justify-center shadow-soft-glow">
+                  <LayoutGrid size={28} />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-2">
+                    {breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Katalog'}
+                  </h2>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {isLoading ? 'Yangilanmoqda' : `${categories.length} bo'lim mavjud`}
+                  </p>
+                </div>
               </div>
             </div>
             
             <div className="relative group w-full">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+              <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors pointer-events-none">
+                <Search size={22} />
+              </div>
               <input 
                 type="text"
-                placeholder="Qidiruv..."
-                className="w-full pl-14 pr-5 py-5 rounded-[1.75rem] bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-sm font-bold shadow-sm placeholder:font-normal"
+                placeholder="Bo'lim nomini yozing..."
+                className="w-full pl-16 pr-6 py-5 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-sm font-bold shadow-glass placeholder:font-bold placeholder:text-slate-300 uppercase placeholder:tracking-widest"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -224,44 +272,40 @@ const App: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-64 bg-white/50 dark:bg-slate-900/50 rounded-[2.5rem] animate-pulse border border-slate-200/30 dark:border-slate-800/30" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-64 bg-white/40 dark:bg-slate-900/40 rounded-[2.5rem] animate-pulse border border-slate-200/30 dark:border-slate-800/30" />
             ))}
           </div>
         ) : filteredCategories.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCategories.map(cat => (
               <CategoryCard 
                 key={cat.id} 
                 category={cat} 
                 onSelect={(id) => navigateTo(id, cat.nameUz)}
                 onEdit={(c) => { setEditingCategory(c); setIsModalOpen(true); }}
-                onDelete={async (id) => {
-                  if (confirm('Ushbu kategoriyani o\'chirmoqchimisiz?')) {
-                    const res = await apiService.deleteCategory(id);
-                    if (res.success) loadCategories(currentParentId);
-                  }
-                }}
+                onDelete={(id) => setConfirmState({ isOpen: true, id })}
               />
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-24 text-center glass-panel rounded-[3rem] border-dashed border-2 border-slate-200 dark:border-slate-800">
-            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 text-slate-400 rounded-3xl flex items-center justify-center mb-6">
-              <Package size={40} />
+          <div className="flex flex-col items-center justify-center py-24 text-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+            <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-700 rounded-[2rem] flex items-center justify-center mb-8">
+              <Package size={48} />
             </div>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Bo'lim bo'sh</h3>
-            <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Yangi kategoriya qo'shing</p>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Topilmadi</h3>
+            <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-[0.3em]">Ro'yxat bo'sh yoki qidiruvda xato</p>
           </div>
         )}
       </div>
 
       <button 
         onClick={() => { setEditingCategory(null); setIsModalOpen(true); }}
-        className="fixed bottom-10 right-8 w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-600/30 active:scale-90 active:rotate-12 transition-all z-50 border-4 border-white dark:border-slate-950"
+        className="fixed bottom-10 right-8 w-16 h-16 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.75rem] flex items-center justify-center shadow-2xl active:scale-90 active:rotate-12 transition-all z-50 border-4 border-white dark:border-slate-950 group"
       >
-        <Plus size={32} strokeWidth={3} />
+        <div className="absolute inset-0 bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity rounded-[1.5rem]"></div>
+        <Plus size={36} strokeWidth={3} className="relative z-10 group-hover:text-white" />
       </button>
 
       <CategoryModal 
@@ -270,6 +314,14 @@ const App: React.FC = () => {
         onSubmit={handleAddOrEdit}
         initialData={editingCategory}
         parentId={currentParentId}
+      />
+
+      <ConfirmModal 
+        isOpen={confirmState.isOpen}
+        title="O'chirish"
+        message="Siz rostdan ham ushbu bo'limni o'chirmoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi."
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmState({ isOpen: false, id: null })}
       />
     </Layout>
   );
