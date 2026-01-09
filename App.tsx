@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, ChevronRight, Home, Search, ShieldAlert, Loader2, Package, WifiOff, RefreshCcw, LayoutGrid, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { apiService } from './api';
+import { DEFAULT_CHAT_ID } from './consts';
 import { Category, Product, UserAuthData } from './types';
 import { Layout } from './components/Layout';
 import { CategoryCard } from './components/CategoryCard';
@@ -10,8 +11,6 @@ import { ProductCard } from './components/ProductCard';
 import { ProductModal } from './components/ProductModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { Notification, NotificationType } from './components/Notification';
-
-const DEFAULT_CHAT_ID = '7882316826';
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');

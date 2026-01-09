@@ -14,6 +14,21 @@ export interface Category {
   parentId: string | null;
 }
 
+export interface ProductType {
+  id: string;
+  imgSize: number;
+  imgName: string;
+  imageUrl: string;
+  nameUz: string;
+  nameUzCyrillic: string;
+  nameEn: string;
+  nameRu: string;
+  productId: string;
+  price: number;
+  stock: number;
+  createdAt: string;
+}
+
 export interface Product {
   id: string;
   nameUz: string;
@@ -24,9 +39,6 @@ export interface Product {
   descriptionUzCyrillic: string;
   descriptionEn: string;
   descriptionRu: string;
-  price: number;
-  stock: number;
-  imageUrl: string;
   categoryId: string;
   status: Status;
   createdAt: string;
@@ -37,9 +49,10 @@ export interface Product {
   discountStartAt: string | null;
   discountEndAt: string | null;
   orderIndex: number;
+  types: ProductType[];
 }
 
-export interface ProductCreateRequest {
+export interface EditProductRequest {
   nameUz: string;
   nameUzCyrillic: string;
   nameEn: string;
@@ -48,16 +61,37 @@ export interface ProductCreateRequest {
   descriptionUzCyrillic: string;
   descriptionEn: string;
   descriptionRu: string;
-  price: number;
-  stock: number;
-  imageUrl: string;
-  categoryId: string;
   status: Status;
   discountType: DiscountType;
   discountValue: number | null;
   discountStartAt: string | null;
   discountEndAt: string | null;
   orderIndex: number;
+}
+
+export interface AddProductTypeRequest {
+  imgSize: number;
+  imgName: string;
+  imageUrl: string;
+  nameUz: string;
+  nameUzCyrillic: string;
+  nameEn: string;
+  nameRu: string;
+  price: number;
+  stock: number;
+  productId: string;
+}
+
+export interface EditProductTypeRequest {
+  imgSize: number;
+  imgName: string;
+  imageUrl: string;
+  nameUz: string;
+  nameUzCyrillic: string;
+  nameEn: string;
+  nameRu: string;
+  price: number;
+  stock: number;
 }
 
 export interface CategoryCreateRequest {

@@ -50,7 +50,8 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
     if (!formData.nameUz) return;
     setIsAiLoading(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: (process.env as any).API_KEY });
+      // Fix: Use process.env.API_KEY directly as per Google GenAI guidelines
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Translate and transliterate category name: "${formData.nameUz}". Return only JSON: {"cyr": "...", "ru": "...", "en": "..."}`,

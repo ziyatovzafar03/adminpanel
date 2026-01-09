@@ -1,7 +1,17 @@
 
-import { ApiResponse, Category, CategoryCreateRequest, CategoryEditRequest, Product, ProductCreateRequest, UserAuthData } from './types';
-
-const BASE_URL = 'https://4bdf137143e3.ngrok-free.app';
+import { 
+  ApiResponse, 
+  Category, 
+  CategoryCreateRequest, 
+  CategoryEditRequest, 
+  Product, 
+  EditProductRequest, 
+  AddProductTypeRequest, 
+  EditProductTypeRequest,
+  UserAuthData,
+  Status
+} from './types';
+import { BASE_URL } from './consts';
 
 const getHeaders = (isMultipart = false) => {
   const headers: any = {
@@ -53,31 +63,21 @@ export const apiService = {
     return handleResponse(response);
   },
 
-  // Product APIs
+  // Product APIs (Core)
   async getProductsByCategoryId(categoryId: string): Promise<ApiResponse<Product[]>> {
     const response = await fetch(`${BASE_URL}/api/product/products-by-category-id/${categoryId}`, { headers: getHeaders() });
     return handleResponse(response);
   },
-  async uploadFile(file: File): Promise<ApiResponse<string>> {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await fetch(`${BASE_URL}/api/file/upload-file`, {
+  // Fix: Added missing createProduct method to apiService to resolve error in App.tsx
+  async createProduct(data: any): Promise<ApiResponse<Product>> {
+    const response = await fetch(`${BASE_URL}/api/product`, {
       method: 'POST',
-      headers: getHeaders(true),
-      body: formData
+      headers: getHeaders(),
+      body: JSON.stringify(data)
     });
     return handleResponse(response);
   },
-  async createProduct(data: ProductCreateRequest): Promise<ApiResponse<Product>> {
-    // Assuming a standard POST endpoint for creation, otherwise use update with new ID if provided
-    const response = await fetch(`${BASE_URL}/api/product/create`, { 
-      method: 'POST', 
-      headers: getHeaders(), 
-      body: JSON.stringify(data) 
-    });
-    return handleResponse(response);
-  },
-  async updateProduct(id: string, data: ProductCreateRequest): Promise<ApiResponse<Product>> {
+  async updateProduct(id: string, data: EditProductRequest): Promise<ApiResponse<Product>> {
     const response = await fetch(`${BASE_URL}/api/product/update/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
@@ -85,9 +85,76 @@ export const apiService = {
     });
     return handleResponse(response);
   },
+  async changeProductStatus(id: string, status: Status): Promise<ApiResponse<Product>> {
+    const response = await fetch(`${BASE_URL}/api/product/change-product-status/${id}?status=${status}`, {
+      method: 'PUT',
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  },
   async deleteProduct(id: string): Promise<ApiResponse<boolean>> {
-    // Soft delete usually via update status to DELETED
-    const response = await fetch(`${BASE_URL}/api/product/delete/${id}`, { method: 'DELETE', headers: getHeaders() });
+    const response = await fetch(`${BASE_URL}/api/product/delete-product/${id}`, {
+      method: 'PUT',
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  },
+  async restoreProduct(id: string): Promise<ApiResponse<Product>> {
+    const response = await fetch(`${BASE_URL}/api/product/restore-product/${id}`, {
+      method: 'PUT',
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Product Filtering APIs
+  async getActiveProducts(categoryId: string): Promise<ApiResponse<Product[]>> {
+    const response = await fetch(`${BASE_URL}/api/product/active-products/${categoryId}`, { headers: getHeaders() });
+    return handleResponse(response);
+  },
+  async getClosedProducts(categoryId: string): Promise<ApiResponse<Product[]>> {
+    const response = await fetch(`${BASE_URL}/api/product/closed-products/${categoryId}`, { headers: getHeaders() });
+    return handleResponse(response);
+  },
+  async getDeletedProducts(categoryId: string): Promise<ApiResponse<Product[]>> {
+    const response = await fetch(`${BASE_URL}/api/product/delete-products/${categoryId}`, { headers: getHeaders() });
+    return handleResponse(response);
+  },
+
+  // Product Type (Variant) APIs
+  async addProductType(data: AddProductTypeRequest): Promise<ApiResponse<Product>> {
+    const response = await fetch(`${BASE_URL}/api/product/add-product-type`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return handleResponse(response);
+  },
+  async updateProductType(id: string, data: EditProductTypeRequest): Promise<ApiResponse<any>> {
+    const response = await fetch(`${BASE_URL}/api/product/update-product-type/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return handleResponse(response);
+  },
+  async deleteProductType(id: string): Promise<ApiResponse<boolean>> {
+    const response = await fetch(`${BASE_URL}/api/product/product-type/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // File APIs
+  async uploadFile(file: File): Promise<ApiResponse<any>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${BASE_URL}/api/file/upload-file`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: formData
+    });
     return handleResponse(response);
   }
 };

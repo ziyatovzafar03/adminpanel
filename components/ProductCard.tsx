@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Edit3, Trash2, Tag, Layers, ShoppingBag } from 'lucide-react';
-import { Product, DiscountType } from '../types';
+import { Edit3, Trash2, Tag, ShoppingBag, Layers, AlertCircle } from 'lucide-react';
+import { Product } from '../types';
 
 interface ProductCardProps {
   product: Product;
@@ -10,21 +10,28 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete }) => {
-  const calculateDiscountPrice = () => {
-    if (product.discountType === 'NONE' || !product.discountValue) return product.price;
-    if (product.discountType === 'PERCENT') return product.price - (product.price * product.discountValue / 100);
-    if (product.discountType === 'FIXED') return Math.max(product.price - product.discountValue, 0);
-    return product.price;
+  const primaryType = product.types?.[0];
+  
+  const calculateDiscountPrice = (basePrice: number) => {
+    if (product.discountType === 'NONE' || !product.discountValue) return basePrice;
+    if (product.discountType === 'PERCENT') return basePrice - (basePrice * product.discountValue / 100);
+    if (product.discountType === 'FIXED') return Math.max(basePrice - product.discountValue, 0);
+    return basePrice;
   };
 
-  const discountPrice = calculateDiscountPrice();
   const hasDiscount = product.discountType !== 'NONE' && product.discountValue;
+  const totalStock = product.types?.reduce((acc, t) => acc + t.stock, 0) || 0;
+  
+  // Find min/max price for multi-variant products
+  const prices = product.types?.map(t => t.price) || [];
+  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
 
   return (
     <div className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden shadow-sm hover:shadow-premium transition-all duration-300">
       <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-800">
         <img 
-          src={product.imageUrl || 'https://via.placeholder.com/400?text=No+Image'} 
+          src={primaryType?.imageUrl || 'https://via.placeholder.com/400?text=No+Variants'} 
           alt={product.nameUz} 
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
@@ -48,7 +55,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
           <div className="flex items-center gap-2 mb-1">
              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order: {product.orderIndex}</span>
              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">•</span>
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stock: {product.stock}</span>
+             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stock: {totalStock}</span>
+             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">•</span>
+             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Variants: {product.types?.length || 0}</span>
           </div>
           <h3 className="text-xl font-black text-slate-900 dark:text-white line-clamp-1 uppercase tracking-tight">{product.nameUz}</h3>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 min-h-[2.5rem]">{product.descriptionUz}</p>
@@ -56,13 +65,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
 
         <div className="flex items-end justify-between mb-6">
           <div className="flex flex-col">
-            {hasDiscount && (
+            {hasDiscount && prices.length > 0 && (
               <span className="text-xs font-bold text-slate-400 line-through tracking-tighter decoration-rose-500/50">
-                {product.price.toLocaleString()} so'm
+                {minPrice === maxPrice ? minPrice.toLocaleString() : `${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`} so'm
               </span>
             )}
             <span className="text-xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">
-              {discountPrice.toLocaleString()} <span className="text-xs uppercase ml-1">so'm</span>
+              {prices.length > 0 ? (
+                minPrice === maxPrice 
+                  ? `${calculateDiscountPrice(minPrice).toLocaleString()}` 
+                  : `${calculateDiscountPrice(minPrice).toLocaleString()} - ${calculateDiscountPrice(maxPrice).toLocaleString()}`
+              ) : '0'} <span className="text-xs uppercase ml-1">so'm</span>
             </span>
           </div>
           <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl text-slate-400">
