@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   X, Save, Sparkles, Loader2, Tag, Hash, Activity, 
-  Image as ImageIcon, DollarSign, Package, Plus, Trash2, Edit2, AlertCircle, Check, Layers, Globe, ShieldAlert
+  Image as ImageIcon, DollarSign, Package, Plus, Trash2, Edit2, AlertCircle, Check, Layers, Globe, Calendar, Percent
 } from 'lucide-react';
 import { Product, Status } from '../types';
 import { apiService } from '../api';
@@ -192,7 +192,17 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
       setVariantError("Kamida bitta variant qo'shing");
       return;
     }
-    onSubmit({ ...formData, types, categoryId });
+
+    // Format dates to YYYY-MM-DDT00:00:00 as requested by backend
+    const submissionData = { ...formData };
+    if (submissionData.discountStartAt && !submissionData.discountStartAt.includes('T')) {
+      submissionData.discountStartAt = `${submissionData.discountStartAt}T00:00:00`;
+    }
+    if (submissionData.discountEndAt && !submissionData.discountEndAt.includes('T')) {
+      submissionData.discountEndAt = `${submissionData.discountEndAt}T00:00:00`;
+    }
+
+    onSubmit({ ...submissionData, types, categoryId });
   };
 
   if (!isOpen) return null;
@@ -271,7 +281,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                     <input 
                       required={langTab === 'uz'}
                       className={inputClass} 
-                      value={langTab === 'uz' ? formData.nameUz : langTab === 'uzCyr' ? formData.nameUzCyrillic : langTab === 'ru' ? formData.nameRu : formData.nameEn} 
+                      value={langTab === 'uz' ? formData.nameUz : langTab === 'uzCyr' ? formData.nameUzCyrillic : langTab === 'ru' ? formData.nameRu : langTab === 'en' ? formData.nameEn : ''} 
                       onChange={e => {
                         const key = langTab === 'uz' ? 'nameUz' : langTab === 'uzCyr' ? 'nameUzCyrillic' : langTab === 'ru' ? 'nameRu' : 'nameEn';
                         setFormData({...formData, [key]: e.target.value});
@@ -299,7 +309,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                 <label className={labelClass}>Mahsulot tavsifi</label>
                 <textarea 
                   className="w-full p-6 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-sm font-semibold min-h-[120px] resize-none shadow-sm"
-                  value={langTab === 'uz' ? formData.descriptionUz : langTab === 'uzCyr' ? formData.descriptionUzCyrillic : langTab === 'ru' ? formData.descriptionRu : formData.descriptionEn}
+                  value={langTab === 'uz' ? formData.descriptionUz : langTab === 'uzCyr' ? formData.descriptionUzCyrillic : langTab === 'ru' ? formData.descriptionRu : langTab === 'en' ? formData.descriptionEn : ''}
                   onChange={e => {
                     const key = langTab === 'uz' ? 'descriptionUz' : langTab === 'uzCyr' ? 'descriptionUzCyrillic' : langTab === 'ru' ? 'descriptionRu' : 'descriptionEn';
                     setFormData({...formData, [key]: e.target.value});
@@ -315,6 +325,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                   </div>
                   <h4 className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">Parametrlar va Chegirma</h4>
                 </div>
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label className={labelClass}>Sotuv Holati</label>
@@ -332,6 +343,57 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                     </select>
                   </div>
                 </div>
+
+                {formData.discountType !== 'NONE' && (
+                  <div className="space-y-6 animate-in slide-in-from-top-4 duration-500">
+                    <div className="relative group">
+                      <label className={labelClass}>
+                        {formData.discountType === 'PERCENT' ? 'Chegirma foizi (%)' : 'Chegirma summasi (So\'m)'}
+                      </label>
+                      <div className="relative">
+                        {formData.discountType === 'PERCENT' ? (
+                          <Percent size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
+                        ) : (
+                          <DollarSign size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500" />
+                        )}
+                        <input 
+                          type="number" 
+                          className={`${inputClass} !bg-indigo-500/5 border-indigo-500/20`}
+                          placeholder="0"
+                          value={formData.discountValue || ''}
+                          onChange={e => setFormData({...formData, discountValue: +e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="relative group">
+                        <label className={labelClass}>Boshlanish sanasi</label>
+                        <div className="relative">
+                          <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input 
+                            type="date" 
+                            className={inputClass}
+                            value={formData.discountStartAt}
+                            onChange={e => setFormData({...formData, discountStartAt: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <div className="relative group">
+                        <label className={labelClass}>Tugash sanasi</label>
+                        <div className="relative">
+                          <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input 
+                            type="date" 
+                            className={inputClass}
+                            value={formData.discountEndAt}
+                            onChange={e => setFormData({...formData, discountEndAt: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -395,7 +457,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onS
                          <Tag size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600" />
                          <input 
                           className={`${inputClass} !bg-slate-50 dark:!bg-slate-950/50`} 
-                          value={variantLangTab === 'uz' ? newType.nameUz : variantLangTab === 'uzCyr' ? newType.nameUzCyrillic : variantLangTab === 'ru' ? newType.nameRu : newType.nameEn} 
+                          value={variantLangTab === 'uz' ? newType.nameUz : variantLangTab === 'uzCyr' ? newType.nameUzCyrillic : variantLangTab === 'ru' ? newType.nameRu : variantLangTab === 'en' ? newType.nameEn : ''} 
                           onChange={e => {
                             const key = variantLangTab === 'uz' ? 'nameUz' : variantLangTab === 'uzCyr' ? 'nameUzCyrillic' : variantLangTab === 'ru' ? 'nameRu' : 'nameEn';
                             setNewType({...newType, [key]: e.target.value});

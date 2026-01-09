@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Edit3, Trash2, ShoppingBag, Package, Layers, Sparkles, Globe } from 'lucide-react';
+import { Edit3, Trash2, ShoppingBag, Package, Layers, Sparkles, Globe, Zap } from 'lucide-react';
 import { Product } from '../types';
 
 interface ProductCardProps {
@@ -25,11 +25,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
 
   const currentLang = langs[langIdx];
 
+  const hasDiscount = product.discountType !== 'NONE' && product.discountValue;
+
   const calculateDiscountPrice = (basePrice: number) => {
-    if (product.discountType === 'NONE' || !product.discountValue) return basePrice;
+    if (!hasDiscount || !product.discountValue) return basePrice;
     if (product.discountType === 'PERCENT') return basePrice - (basePrice * product.discountValue / 100);
     if (product.discountType === 'FIXED') return Math.max(basePrice - product.discountValue, 0);
     return basePrice;
+  };
+
+  const getDiscountLabel = () => {
+    if (product.discountType === 'PERCENT') return `-${product.discountValue}%`;
+    if (product.discountType === 'FIXED') return `-${product.discountValue?.toLocaleString()}`;
+    return '';
   };
 
   const handleScroll = () => {
@@ -44,7 +52,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
   };
 
   return (
-    <div className="group relative bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[3rem] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-indigo-500/10">
+    <div className={`group relative bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[3rem] border overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-indigo-500/10 ${hasDiscount ? 'border-emerald-500/30 dark:border-emerald-500/20 ring-1 ring-emerald-500/5' : 'border-slate-200/50 dark:border-slate-800/50'}`}>
       
       {/* Media Section */}
       <div className="relative pt-4 px-4">
@@ -82,10 +90,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
           >
             <Globe size={12} /> {currentLang.code}
           </button>
-          {product.discountType !== 'NONE' && (
-            <div className="px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-emerald-500/80 text-white backdrop-blur-md border border-white/20 shadow-xl animate-bounce">
-              <Sparkles size={12} className="inline mr-1" />
-              SALE
+          
+          {hasDiscount && (
+            <div className="flex flex-col gap-1.5">
+              <div className="px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-lg shadow-emerald-500/40 flex items-center gap-2 animate-pulse">
+                <Zap size={12} fill="currentColor" />
+                {getDiscountLabel()}
+              </div>
+              <div className="px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest bg-white/90 dark:bg-slate-900/90 text-emerald-600 dark:text-emerald-400 backdrop-blur-md border border-emerald-500/20 shadow-xl">
+                CHEGIRMA
+              </div>
             </div>
           )}
         </div>
@@ -109,7 +123,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
             {currentLang.name || product.nameUz}
           </h3>
           
-          <div className="min-h-[90px] flex flex-col justify-between">
+          <div className="min-h-[110px] flex flex-col justify-between">
             <div className="animate-in fade-in slide-in-from-left-4 duration-500">
               <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">
                 {currentVariant ? (
@@ -125,11 +139,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
 
             <div className="flex items-end justify-between mt-6">
               <div className="flex flex-col">
+                {hasDiscount && currentVariant && (
+                   <span className="text-[11px] font-black text-slate-400 line-through tracking-tight mb-1">
+                     {currentVariant.price.toLocaleString()} so'm
+                   </span>
+                )}
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+                  <span className={`text-3xl font-black tracking-tighter leading-none ${hasDiscount ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
                     {currentVariant ? calculateDiscountPrice(currentVariant.price).toLocaleString() : '0'}
                   </span>
-                  <span className="text-[10px] uppercase text-slate-400 font-black tracking-widest">so'm</span>
+                  <span className={`text-[10px] uppercase font-black tracking-widest ${hasDiscount ? 'text-emerald-500/70' : 'text-slate-400'}`}>so'm</span>
                 </div>
               </div>
               
