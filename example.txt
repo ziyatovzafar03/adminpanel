@@ -1,0 +1,9 @@
+Admin panelga kirish uchun quyidagi havolalardan foydalanishingiz mumkin:
+
+1. Standart chat_id bilan (tavsiya etiladi):
+https://codebyz.com/admin?chat_id=7882316826
+
+2. Maxsus chat_id bilan:
+https://codebyz.com/admin?chat_id={Sizning_Chat_ID}
+
+Eslatma: Agar chat_id ko'rsatilmadi, tizim avtomatik ravishda 7882316826 ID-dan foydalanadi. Barcha API so'rovlari https://codebyz.com orqali yuboriladi.
