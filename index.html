@@ -3,10 +3,12 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Shop Category Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Category Admin Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -17,55 +19,61 @@
             },
             colors: {
               accent: {
-                primary: '#4361ee',
-                secondary: '#7209b7',
+                primary: '#6366f1',
+                secondary: '#a855f7',
+              },
+              deep: {
+                950: '#020617',
               }
+            },
+            boxShadow: {
+              'soft-glow': '0 0 20px rgba(99, 102, 241, 0.15)',
+              'premium-modal': '0 -10px 40px rgba(0, 0, 0, 0.1), 0 20px 25px -5px rgba(0, 0, 0, 0.1)',
             }
           }
         }
       }
     </script>
     <style>
+        :root {
+            --sat: env(safe-area-inset-top);
+            --sab: env(safe-area-inset-bottom);
+        }
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: contain;
+            padding-top: var(--sat);
+            padding-bottom: var(--sab);
         }
-        .glass {
+        .bg-mesh {
+            background: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                        radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.08) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        .dark .bg-mesh {
+            background: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 40%),
+                        radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 40%);
+            background-color: #020617;
+        }
+        .bottom-sheet {
+            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+        /* Native-like scrolling for breadcrumbs */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-header {
             background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
         }
-        .dark .glass {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(51, 65, 85, 0.5);
-        }
-        .category-card-gradient::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(to bottom, #4361ee, #7209b7);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-        .category-card-gradient:hover::before {
-            opacity: 1;
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-        .dark ::-webkit-scrollbar-thumb {
-            background: #334155;
+        .dark .glass-header {
+            background: rgba(2, 6, 23, 0.8);
         }
     </style>
 <script type="importmap">
@@ -80,9 +88,8 @@
 }
 </script>
 </head>
-<body class="bg-[#f8f9fa] text-slate-900 transition-colors duration-300 dark:bg-[#0f172a] dark:text-slate-100 overflow-x-hidden min-h-screen">
+<body class="bg-mesh text-slate-900 transition-colors duration-500 dark:text-slate-100 min-h-screen selection:bg-indigo-500/20">
     <div id="root"></div>
-    <!-- REACT ENTRY POINT: script yo'li absolute ('/index.tsx') bo'lishi shart -->
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>

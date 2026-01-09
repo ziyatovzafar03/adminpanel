@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Plus, ChevronRight, Home, Search, ShieldAlert, Loader2, Package, WifiOff, RefreshCcw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, ChevronRight, Home, Search, ShieldAlert, Loader2, Package, WifiOff, RefreshCcw, LayoutGrid } from 'lucide-react';
 import { apiService } from './api';
 import { Category, UserAuthData } from './types';
 import { Layout } from './components/Layout';
@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const breadcrumbRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -28,6 +29,12 @@ const App: React.FC = () => {
     setTheme(activeTheme);
     document.documentElement.classList.toggle('dark', activeTheme === 'dark');
   }, []);
+
+  useEffect(() => {
+    if (breadcrumbRef.current) {
+      breadcrumbRef.current.scrollLeft = breadcrumbRef.current.scrollWidth;
+    }
+  }, [breadcrumb]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -38,35 +45,25 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initApp = async () => {
-      console.log("App initializing...");
       try {
-        // Pathsegments logic: /7882316826 segmentini olamiz
         const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'admin');
         const pathChatId = pathSegments[0];
-        
         const urlParams = new URLSearchParams(window.location.search);
         const queryChatId = urlParams.get('chat_id');
-        
         const chatId = pathChatId || queryChatId || DEFAULT_CHAT_ID;
-        console.log("Using Chat ID:", chatId);
         
         const response = await apiService.fetchUserByChatId(chatId);
-        console.log("User API Response:", response);
-
         const userData = response.success ? response.data : (response as any);
 
         if (userData && (userData.status === 'CONFIRMED' || userData.exists === true)) {
-          console.log("Authorization successful.");
           setCurrentUser(userData);
           setAuthStatus('authorized');
           loadCategories(null);
         } else {
-          console.warn("User not authorized or doesn't exist.");
           setAuthStatus('unauthorized');
         }
       } catch (err: any) {
-        console.error("Initialization failed:", err);
-        setErrorMessage(err.message || "Ulanishda xatolik yuz berdi");
+        setErrorMessage(err.message || "Internet bilan aloqa yo'q");
         setAuthStatus('error');
       }
     };
@@ -83,13 +80,13 @@ const App: React.FC = () => {
         setCategories(response.data.sort((a, b) => a.orderIndex - b.orderIndex));
       }
     } catch (err) {
-      console.error("Failed to load categories:", err);
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const navigateTo = (id: string | null, name: string = 'Bosh sahifa') => {
+  const navigateTo = (id: string | null, name: string = 'Asosiy') => {
     if (id === null) {
       setBreadcrumb([]);
     } else {
@@ -125,10 +122,13 @@ const App: React.FC = () => {
 
   if (authStatus === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-mesh">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-indigo-600" size={48} />
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Yuklanmoqda...</p>
+          <div className="relative">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 animate-spin"></div>
+            <div className="absolute inset-0 w-12 h-12 rounded-2xl bg-indigo-600 animate-ping opacity-20"></div>
+          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Yuklanmoqda</p>
         </div>
       </div>
     );
@@ -136,19 +136,16 @@ const App: React.FC = () => {
 
   if (authStatus === 'error') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 text-center">
-        <div className="w-20 h-20 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-3xl flex items-center justify-center mb-6">
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-mesh text-center">
+        <div className="w-20 h-20 bg-rose-500/10 text-rose-500 rounded-[1.5rem] flex items-center justify-center mb-6">
           <WifiOff size={40} />
         </div>
-        <h1 className="text-2xl font-bold mb-2">Ulanish xatosi</h1>
-        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm">
-          {errorMessage || "Backend serverga ulanib bo'lmadi. Iltimos, API havolasini tekshiring."}
-        </p>
+        <h1 className="text-2xl font-black mb-2 uppercase">Xatolik</h1>
+        <p className="text-slate-500 text-sm mb-8 leading-relaxed max-w-xs">{errorMessage}</p>
         <button 
           onClick={() => window.location.reload()} 
-          className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all active:scale-95"
+          className="w-full max-w-xs py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
         >
-          <RefreshCcw size={18} />
           Qayta urinish
         </button>
       </div>
@@ -157,51 +154,68 @@ const App: React.FC = () => {
 
   if (authStatus === 'unauthorized') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 text-center">
-        <ShieldAlert size={64} className="text-rose-500 mb-6" />
-        <h1 className="text-2xl font-bold mb-2">Ruxsat yo'q</h1>
-        <p className="text-slate-500 mb-8 max-w-xs">Chat ID noto'g'ri yoki sizga ruxsat berilmagan.</p>
-        <button onClick={() => window.location.href = '/'} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Bosh sahifaga qaytish</button>
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-mesh text-center">
+        <div className="w-20 h-20 bg-amber-500/10 text-amber-500 rounded-[1.5rem] flex items-center justify-center mb-6">
+          <ShieldAlert size={40} />
+        </div>
+        <h1 className="text-2xl font-black mb-2 uppercase">Ruxsat yo'q</h1>
+        <p className="text-slate-500 text-sm mb-8 leading-relaxed">Sizning chat ID tizimda ro'yxatdan o'tmagan.</p>
+        <button onClick={() => window.location.href = '/'} className="w-full max-w-xs py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Bosh sahifaga qaytish</button>
       </div>
     );
   }
 
   return (
     <Layout theme={theme} toggleTheme={toggleTheme} onLogout={() => window.location.reload()} currentUserFirstName={currentUser?.firstname}>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4">
-          <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-            <button onClick={() => navigateTo(null)} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
+      <div className="flex flex-col gap-6 sm:gap-8 max-w-5xl mx-auto">
+        <div className="flex flex-col gap-6">
+          {/* Breadcrumbs - Native Mobile Feel */}
+          <div ref={breadcrumbRef} className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-2 -mx-4 px-4 scroll-smooth">
+            <button 
+              onClick={() => navigateTo(null)} 
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 text-slate-500 hover:text-indigo-600 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+            >
               <Home size={14} />
-              <span>Root</span>
+              Root
             </button>
             {breadcrumb.map((b, i) => (
               <React.Fragment key={b.id}>
-                <ChevronRight size={12} className="text-slate-300" />
+                <ChevronRight size={14} className="text-slate-300 dark:text-slate-700 flex-shrink-0" />
                 <button 
                   onClick={() => navigateTo(b.id, b.name)}
-                  className={`hover:text-indigo-600 transition-colors ${i === breadcrumb.length - 1 ? 'text-indigo-600 font-bold' : ''}`}
+                  className={`flex-shrink-0 px-4 py-2 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest active:scale-95 ${
+                    i === breadcrumb.length - 1 
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/20' 
+                    : 'bg-white dark:bg-slate-900 border-slate-200/50 dark:border-slate-800/50 text-slate-500 hover:text-indigo-600'
+                  }`}
                 >
                   {b.name}
                 </button>
               </React.Fragment>
             ))}
-          </nav>
+          </div>
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
-                {breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Kategoriyalar'}
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Jami {categories.length} ta bo'lim mavjud</p>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-indigo-600 text-white rounded-[1.25rem] shadow-soft-glow">
+                <LayoutGrid size={24} />
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  {breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Bo\'limlar'}
+                </h2>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {isLoading ? 'Yangilanmoqda' : `${categories.length} ta element topildi`}
+                </p>
+              </div>
             </div>
             
-            <div className="relative group max-w-xs w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+            <div className="relative group w-full">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
               <input 
                 type="text"
-                placeholder="Bo'limni qidirish..."
-                className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                placeholder="Qidiruv..."
+                className="w-full pl-14 pr-5 py-5 rounded-[1.75rem] bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-sm font-bold shadow-sm placeholder:font-normal"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -210,13 +224,13 @@ const App: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-44 bg-white dark:bg-slate-900 rounded-2xl animate-pulse border border-slate-100 dark:border-slate-800" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-64 bg-white/50 dark:bg-slate-900/50 rounded-[2.5rem] animate-pulse border border-slate-200/30 dark:border-slate-800/30" />
             ))}
           </div>
         ) : filteredCategories.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredCategories.map(cat => (
               <CategoryCard 
                 key={cat.id} 
@@ -233,17 +247,19 @@ const App: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Package size={64} className="text-slate-200 dark:text-slate-800 mb-4" />
-            <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300">Bo'limlar mavjud emas</h3>
-            <p className="text-sm text-slate-400">Yangi bo'lim yaratish uchun pastdagi + tugmasini bosing</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center glass-panel rounded-[3rem] border-dashed border-2 border-slate-200 dark:border-slate-800">
+            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 text-slate-400 rounded-3xl flex items-center justify-center mb-6">
+              <Package size={40} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Bo'lim bo'sh</h3>
+            <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Yangi kategoriya qo'shing</p>
           </div>
         )}
       </div>
 
       <button 
         onClick={() => { setEditingCategory(null); setIsModalOpen(true); }}
-        className="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all z-50 border-4 border-white dark:border-slate-950"
+        className="fixed bottom-10 right-8 w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-600/30 active:scale-90 active:rotate-12 transition-all z-50 border-4 border-white dark:border-slate-950"
       >
         <Plus size={32} strokeWidth={3} />
       </button>
