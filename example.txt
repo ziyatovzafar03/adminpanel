@@ -1,9 +1,11 @@
 Admin panelga kirish uchun quyidagi havolalardan foydalanishingiz mumkin:
 
-1. Standart chat_id bilan (tavsiya etiladi):
-https://codebyz.com/admin?chat_id=7882316826
+1. To'g'ridan-to'g'ri (avtomatik redirect bilan):
+https://codebyz.com/
+
+(Tizim avtomatik ravishda https://codebyz.com/?chat_id=7882316826 manziliga yo'naltiradi)
 
 2. Maxsus chat_id bilan:
-https://codebyz.com/admin?chat_id={Sizning_Chat_ID}
+https://codebyz.com/?chat_id={Sizning_Chat_ID}
 
-Eslatma: Agar chat_id ko'rsatilmadi, tizim avtomatik ravishda 7882316826 ID-dan foydalanadi. Barcha API so'rovlari https://codebyz.com orqali yuboriladi.
+Eslatma: Agar chat_id ko'rsatilmadi, tizim avtomatik ravishda 7882316826 ID-dan foydalanadi va URL-ni yangilaydi. Barcha API so'rovlari https://codebyz.com orqali yuboriladi.

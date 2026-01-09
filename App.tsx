@@ -7,6 +7,8 @@ import { Layout } from './components/Layout';
 import { CategoryCard } from './components/CategoryCard';
 import { CategoryModal } from './components/CategoryModal';
 
+const DEFAULT_CHAT_ID = '7882316826';
+
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [authStatus, setAuthStatus] = useState<'loading' | 'authorized' | 'unauthorized'>('loading');
@@ -35,13 +37,21 @@ const App: React.FC = () => {
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
-  // Auth Guard
+  // Auth Guard & Redirect Logic
   useEffect(() => {
     const checkAuth = async () => {
       const urlParams = new URLSearchParams(window.location.search);
-      // Default chat_id as requested: 7882316826
-      const chatId = urlParams.get('chat_id') || '7882316826';
+      let chatId = urlParams.get('chat_id');
       
+      // Redirect behavior: if no chat_id is present, update the URL to include default one
+      if (!chatId) {
+        chatId = DEFAULT_CHAT_ID;
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('chat_id', DEFAULT_CHAT_ID);
+        // We use replaceState to avoid cluttering browser history with the redirect
+        window.history.replaceState({}, '', newUrl.toString());
+      }
+
       try {
         const response = await apiService.fetchUserByChatId(chatId);
         if (response.success && response.data.exists) {
@@ -109,7 +119,7 @@ const App: React.FC = () => {
         alert(response.message);
       }
     } catch (err) {
-      alert('Operation failed');
+      alert('Amaliyot bajarilmadi');
     }
   };
 
@@ -240,7 +250,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-2xl font-black mb-2 tracking-tight">Hech narsa topilmadi</h3>
             <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto px-4 font-medium leading-relaxed">
-              {searchQuery ? `"${searchQuery}" bo'yicha ma'lumot mavjud emas.` : 'Bu bo'lim hozircha bo'sh. Yangi kategoriya qo'shishni boshlang!'}
+              {searchQuery ? `"${searchQuery}" bo'yicha ma'lumot mavjud emas.` : 'Bu bo\'lim hozircha bo\'sh. Yangi kategoriya qo\'shishni boshlang!'}
             </p>
           </div>
         )}
