@@ -1,6 +1,7 @@
 
-export type Status = 'OPEN' | 'CLOSED';
+export type Status = 'OPEN' | 'CLOSED' | 'DELETED';
 export type UserStatus = 'CONFIRMED' | 'PENDING' | 'REJECTED';
+export type DiscountType = 'PERCENT' | 'NONE' | 'FIXED';
 
 export interface Category {
   id: string;
@@ -9,8 +10,54 @@ export interface Category {
   nameRu: string;
   nameEn: string;
   orderIndex: number;
-  status: Status;
+  status: 'OPEN' | 'CLOSED';
   parentId: string | null;
+}
+
+export interface Product {
+  id: string;
+  nameUz: string;
+  nameUzCyrillic: string;
+  nameEn: string;
+  nameRu: string;
+  descriptionUz: string;
+  descriptionUzCyrillic: string;
+  descriptionEn: string;
+  descriptionRu: string;
+  price: number;
+  stock: number;
+  imageUrl: string;
+  categoryId: string;
+  status: Status;
+  createdAt: string;
+  updatedAt: string;
+  sellerChatId: number | null;
+  discountType: DiscountType;
+  discountValue: number | null;
+  discountStartAt: string | null;
+  discountEndAt: string | null;
+  orderIndex: number;
+}
+
+export interface ProductCreateRequest {
+  nameUz: string;
+  nameUzCyrillic: string;
+  nameEn: string;
+  nameRu: string;
+  descriptionUz: string;
+  descriptionUzCyrillic: string;
+  descriptionEn: string;
+  descriptionRu: string;
+  price: number;
+  stock: number;
+  imageUrl: string;
+  categoryId: string;
+  status: Status;
+  discountType: DiscountType;
+  discountValue: number | null;
+  discountStartAt: string | null;
+  discountEndAt: string | null;
+  orderIndex: number;
 }
 
 export interface CategoryCreateRequest {
@@ -29,12 +76,13 @@ export interface CategoryEditRequest {
   nameEn?: string;
   orderIndex: number;
   parentId: string | null;
-  status: Status;
+  status: 'OPEN' | 'CLOSED';
 }
 
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
+  code?: number;
   data: T;
 }
 
@@ -46,4 +94,5 @@ export interface UserAuthData {
   chatId: number;
   status: UserStatus;
   categoryId: string | null;
+  exists?: boolean;
 }
