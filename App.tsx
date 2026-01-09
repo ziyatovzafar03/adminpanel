@@ -39,8 +39,16 @@ const App: React.FC = () => {
   useEffect(() => {
     const initApp = async () => {
       try {
+        // Path variable orqali chat_id ni olish (masalan: /12345678)
+        const pathSegments = window.location.pathname.split('/').filter(Boolean);
+        const pathChatId = pathSegments[0];
+        
+        // Query param orqali ham tekshirib ko'ramiz (backward compatibility)
         const urlParams = new URLSearchParams(window.location.search);
-        const chatId = urlParams.get('chat_id') || DEFAULT_CHAT_ID;
+        const queryChatId = urlParams.get('chat_id');
+        
+        const chatId = pathChatId || queryChatId || DEFAULT_CHAT_ID;
+        
         const response = await apiService.fetchUserByChatId(chatId);
         const userData = response.success ? response.data : (response as any);
 
