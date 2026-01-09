@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, ChevronRight, Home, Search, ShieldAlert, Loader2, Package, WifiOff, RefreshCcw } from 'lucide-react';
 import { apiService } from './api';
@@ -37,29 +38,35 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initApp = async () => {
+      console.log("App initializing...");
       try {
-        const pathSegments = window.location.pathname.split('/').filter(Boolean);
+        // Pathsegments logic: /7882316826 segmentini olamiz
+        const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'admin');
         const pathChatId = pathSegments[0];
         
         const urlParams = new URLSearchParams(window.location.search);
         const queryChatId = urlParams.get('chat_id');
         
         const chatId = pathChatId || queryChatId || DEFAULT_CHAT_ID;
-        console.log("Identifying with Chat ID:", chatId);
+        console.log("Using Chat ID:", chatId);
         
         const response = await apiService.fetchUserByChatId(chatId);
+        console.log("User API Response:", response);
+
         const userData = response.success ? response.data : (response as any);
 
         if (userData && (userData.status === 'CONFIRMED' || userData.exists === true)) {
+          console.log("Authorization successful.");
           setCurrentUser(userData);
           setAuthStatus('authorized');
           loadCategories(null);
         } else {
+          console.warn("User not authorized or doesn't exist.");
           setAuthStatus('unauthorized');
         }
       } catch (err: any) {
-        console.error("Initialization error:", err);
-        setErrorMessage(err.message || "Server bilan aloqa uzildi");
+        console.error("Initialization failed:", err);
+        setErrorMessage(err.message || "Ulanishda xatolik yuz berdi");
         setAuthStatus('error');
       }
     };
@@ -76,7 +83,7 @@ const App: React.FC = () => {
         setCategories(response.data.sort((a, b) => a.orderIndex - b.orderIndex));
       }
     } catch (err) {
-      console.error("Categories load error:", err);
+      console.error("Failed to load categories:", err);
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +115,7 @@ const App: React.FC = () => {
         loadCategories(currentParentId);
       }
     } catch (err) {
-      alert("Amalni bajarishda xatolik yuz berdi");
+      alert("Xatolik yuz berdi");
     }
   };
 
@@ -135,7 +142,7 @@ const App: React.FC = () => {
         </div>
         <h1 className="text-2xl font-bold mb-2">Ulanish xatosi</h1>
         <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm">
-          {errorMessage || "Backend serverga ulanib bo'lmadi. Iltimos, ngrok havolasini tekshiring."}
+          {errorMessage || "Backend serverga ulanib bo'lmadi. Iltimos, API havolasini tekshiring."}
         </p>
         <button 
           onClick={() => window.location.reload()} 
@@ -153,8 +160,8 @@ const App: React.FC = () => {
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 text-center">
         <ShieldAlert size={64} className="text-rose-500 mb-6" />
         <h1 className="text-2xl font-bold mb-2">Ruxsat yo'q</h1>
-        <p className="text-slate-500 mb-8 max-w-xs">Ushbu chat_id uchun ruxsat topilmadi yoki status tasdiqlanmagan.</p>
-        <button onClick={() => window.location.reload()} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Qayta yuklash</button>
+        <p className="text-slate-500 mb-8 max-w-xs">Chat ID noto'g'ri yoki sizga ruxsat berilmagan.</p>
+        <button onClick={() => window.location.href = '/'} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Bosh sahifaga qaytish</button>
       </div>
     );
   }
