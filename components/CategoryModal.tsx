@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Save, Info, Sparkles, Loader2 } from 'lucide-react';
+import { X, Save, Sparkles, Loader2, Globe } from 'lucide-react';
 import { Category, Status } from '../types';
 import { GoogleGenAI } from "@google/genai";
 
@@ -13,6 +13,7 @@ interface CategoryModalProps {
 }
 
 export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSubmit, initialData, parentId }) => {
+  const [activeTab, setActiveTab] = useState<'uz' | 'uzCyr' | 'ru' | 'en'>('uz');
   const [formData, setFormData] = useState({
     nameUz: '',
     nameUzCyrillic: '',
@@ -46,31 +47,24 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
   }, [initialData, isOpen]);
 
   const handleAiFill = async () => {
-    if (!formData.nameUz) {
-      alert("Iltimos, avval o'zbekcha nomni kiriting!");
-      return;
-    }
-
+    if (!formData.nameUz) return;
     setIsAiLoading(true);
     try {
       const ai = new GoogleGenAI({ apiKey: (process.env as any).API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Quyidagi o'zbekcha shop kategoriyasi nomini boshqa tillarga tarjima qilib JSON formatda qaytar: "${formData.nameUz}". 
-        Format: {"cyrillic": "...", "ru": "...", "en": "..."}`,
+        contents: `Kategoriya nomini: "${formData.nameUz}" quyidagi JSON formatda qaytar: {"cyr": "...", "ru": "...", "en": "..."}`,
         config: { responseMimeType: "application/json" }
       });
-
       const result = JSON.parse(response.text || '{}');
       setFormData(prev => ({
         ...prev,
-        nameUzCyrillic: result.cyrillic || prev.nameUzCyrillic,
+        nameUzCyrillic: result.cyr || prev.nameUzCyrillic,
         nameRu: result.ru || prev.nameRu,
         nameEn: result.en || prev.nameEn
       }));
     } catch (error) {
-      console.error("AI Fill error:", error);
-      alert("AI bilan to'ldirishda xatolik yuz berdi.");
+      console.error("AI Error:", error);
     } finally {
       setIsAiLoading(false);
     }
@@ -80,140 +74,90 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
-      ...formData,
-      parentId: initialData ? initialData.parentId : parentId,
-    };
-    onSubmit(payload);
+    onSubmit({ ...formData, parentId: initialData ? initialData.parentId : parentId });
   };
 
-  const inputClass = "w-full px-5 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-base font-medium";
-  const labelClass = "block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] mb-2 px-1";
+  const inputClass = "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm font-medium";
+  const labelClass = "block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in" onClick={onClose} />
       
-      <div className="relative w-full max-w-2xl glass rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border-t-2 border-white/20 dark:border-white/5">
-        <div className="flex items-center justify-between p-8 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight mb-1">
-              {initialData ? 'Bo\'limni tahrirlash' : 'Yangi bo\'lim yaratish'}
-            </h2>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Shop Kategoriya Boshqaruvi</p>
-          </div>
-          <button onClick={onClose} className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white transition-all shadow-inner">
-            <X size={24} />
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+            {initialData ? 'Tahrirlash' : 'Yangi kategoriya'}
+          </h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
+            <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+              {(['uz', 'uzCyr', 'ru', 'en'] as const).map(tab => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === tab ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}
+                >
+                  {tab === 'uzCyr' ? 'Cyr' : tab}
+                </button>
+              ))}
+            </div>
+
             <div className="relative">
-              <label className={labelClass}>Nom (O'zbekcha)</label>
-              <div className="flex gap-3">
-                <input 
-                  required
-                  className={inputClass}
-                  value={formData.nameUz}
-                  onChange={(e) => setFormData({...formData, nameUz: e.target.value})}
-                  placeholder="Masalan: Maishiy texnika"
-                />
-                <button
-                  type="button"
-                  onClick={handleAiFill}
-                  disabled={isAiLoading}
-                  className="px-6 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white font-black hover:shadow-lg hover:shadow-indigo-600/30 transition-all active:scale-90 disabled:opacity-50 flex items-center justify-center min-w-[64px]"
-                >
-                  {isAiLoading ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
-                </button>
+              <label className={labelClass}>
+                {activeTab === 'uz' && 'Uzbekcha (Lotin)'}
+                {activeTab === 'uzCyr' && 'Uzbekcha (Kirill)'}
+                {activeTab === 'ru' && 'Ruscha'}
+                {activeTab === 'en' && 'Inglizcha'}
+              </label>
+              
+              <div className="flex gap-2">
+                {activeTab === 'uz' && <input required className={inputClass} value={formData.nameUz} onChange={e => setFormData({...formData, nameUz: e.target.value})} placeholder="Masalan: Giyim-kechak" />}
+                {activeTab === 'uzCyr' && <input className={inputClass} value={formData.nameUzCyrillic} onChange={e => setFormData({...formData, nameUzCyrillic: e.target.value})} placeholder="Кийим-кечак" />}
+                {activeTab === 'ru' && <input className={inputClass} value={formData.nameRu} onChange={e => setFormData({...formData, nameRu: e.target.value})} placeholder="Одежда" />}
+                {activeTab === 'en' && <input className={inputClass} value={formData.nameEn} onChange={e => setFormData({...formData, nameEn: e.target.value})} placeholder="Clothing" />}
+                
+                {activeTab === 'uz' && (
+                  <button
+                    type="button"
+                    onClick={handleAiFill}
+                    disabled={isAiLoading || !formData.nameUz}
+                    className="px-4 rounded-xl bg-indigo-600 text-white disabled:opacity-50 hover:bg-indigo-700 transition-all shadow-md flex items-center justify-center"
+                  >
+                    {isAiLoading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Kirillcha (O'zbekcha)</label>
-                <input 
-                  className={inputClass}
-                  value={formData.nameUzCyrillic}
-                  onChange={(e) => setFormData({...formData, nameUzCyrillic: e.target.value})}
-                  placeholder="Маиший техника"
-                />
+                <label className={labelClass}>Tartib raqami</label>
+                <input type="number" className={inputClass} value={formData.orderIndex} onChange={e => setFormData({...formData, orderIndex: parseInt(e.target.value) || 0})} />
               </div>
               <div>
-                <label className={labelClass}>Ruscha (Russian)</label>
-                <input 
-                  className={inputClass}
-                  value={formData.nameRu}
-                  onChange={(e) => setFormData({...formData, nameRu: e.target.value})}
-                  placeholder="Бытовая техника"
-                />
+                <label className={labelClass}>Holati</label>
+                <select className={inputClass} value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as Status})}>
+                  <option value="OPEN">Ochiq</option>
+                  <option value="CLOSED">Yopiq</option>
+                </select>
               </div>
-              <div>
-                <label className={labelClass}>Inglizcha (English)</label>
-                <input 
-                  className={inputClass}
-                  value={formData.nameEn}
-                  onChange={(e) => setFormData({...formData, nameEn: e.target.value})}
-                  placeholder="Home Appliances"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Tartib (Index)</label>
-                <input 
-                  type="number"
-                  className={inputClass}
-                  value={formData.orderIndex}
-                  onChange={(e) => setFormData({...formData, orderIndex: parseInt(e.target.value) || 0})}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className={labelClass}>Holat (Status)</label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setFormData({...formData, status: 'OPEN'})}
-                  className={`py-4 rounded-2xl font-black text-sm uppercase tracking-widest border-2 transition-all ${formData.status === 'OPEN' ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-transparent border-slate-100 dark:border-slate-800 text-slate-400'}`}
-                >
-                  Ochiq (Open)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({...formData, status: 'CLOSED'})}
-                  className={`py-4 rounded-2xl font-black text-sm uppercase tracking-widest border-2 transition-all ${formData.status === 'CLOSED' ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-500/20' : 'bg-transparent border-slate-100 dark:border-slate-800 text-slate-400'}`}
-                >
-                  Yopiq (Closed)
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-[2rem] bg-indigo-50/50 dark:bg-indigo-900/10 border-2 border-indigo-100/50 dark:border-indigo-800/30 flex gap-4 items-start">
-               <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg">
-                 <Info size={20} />
-               </div>
-               <p className="text-sm font-bold text-indigo-700/80 dark:text-indigo-300/80 leading-relaxed">
-                 Kategoriya darajasi: <span className="underline decoration-indigo-400">{parentId ? 'Pastki bo\'lim' : 'Asosiy bo\'lim'}</span>. 
-                 AI tugmasidan foydalanib tarjimalarni avtomatik to'ldirishingiz mumkin.
-               </p>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 mt-10">
-            <button 
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-5 px-8 rounded-2xl bg-slate-100 dark:bg-slate-800 font-black uppercase tracking-widest text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
-            >
+          <div className="flex gap-3 mt-8">
+            <button type="button" onClick={onClose} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
               Bekor qilish
             </button>
-            <button 
-              type="submit"
-              className="flex-[2] py-5 px-8 rounded-2xl bg-indigo-600 text-white font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-600/40 active:scale-95 border-t border-white/20"
-            >
-              <Save size={20} strokeWidth={3} />
-              {initialData ? 'O\'zgarishlarni saqlash' : 'Bo\'limni yaratish'}
+            <button type="submit" className="flex-[2] py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2">
+              <Save size={18} />
+              {initialData ? 'Saqlash' : 'Yaratish'}
             </button>
           </div>
         </form>

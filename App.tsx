@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowLeft, Search, ShieldAlert, Loader2, Sparkles, LayoutGrid, WifiOff } from 'lucide-react';
+import { Plus, ChevronRight, Home, Search, ShieldAlert, Loader2, Package, WifiOff } from 'lucide-react';
 import { apiService } from './api';
 import { Category, UserAuthData } from './types';
 import { Layout } from './components/Layout';
@@ -16,7 +16,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserAuthData | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
-  const [history, setHistory] = useState<string[]>([]);
+  const [breadcrumb, setBreadcrumb] = useState<{id: string | null, name: string}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -24,8 +24,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    const activeTheme = savedTheme || systemTheme;
+    const activeTheme = savedTheme || 'light';
     setTheme(activeTheme);
     document.documentElement.classList.toggle('dark', activeTheme === 'dark');
   }, []);
@@ -42,10 +41,7 @@ const App: React.FC = () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const chatId = urlParams.get('chat_id') || DEFAULT_CHAT_ID;
-        
         const response = await apiService.fetchUserByChatId(chatId);
-        
-        // API formatiga qarab ma'lumotni olish
         const userData = response.success ? response.data : (response as any);
 
         if (userData && (userData.status === 'CONFIRMED' || userData.exists === true)) {
@@ -56,12 +52,10 @@ const App: React.FC = () => {
           setAuthStatus('unauthorized');
         }
       } catch (err: any) {
-        console.error("Auth process error:", err);
-        setErrorMessage(err.message || "Serverga ulanib bo'lmadi");
+        setErrorMessage(err.message);
         setAuthStatus('error');
       }
     };
-
     initApp();
   }, []);
 
@@ -71,29 +65,29 @@ const App: React.FC = () => {
       const response = parentId 
         ? await apiService.getCategoryChildren(parentId)
         : await apiService.getParentCategories();
-      
       if (response && response.success) {
         setCategories(response.data.sort((a, b) => a.orderIndex - b.orderIndex));
       }
     } catch (err) {
-      console.error("Categories load error:", err);
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSelectCategory = (id: string) => {
-    setHistory(prev => [...prev, currentParentId as string].filter(i => i !== null));
+  const navigateTo = (id: string | null, name: string = 'Bosh sahifa') => {
+    if (id === null) {
+      setBreadcrumb([]);
+    } else {
+      const existingIdx = breadcrumb.findIndex(b => b.id === id);
+      if (existingIdx !== -1) {
+        setBreadcrumb(breadcrumb.slice(0, existingIdx + 1));
+      } else {
+        setBreadcrumb([...breadcrumb, { id, name }]);
+      }
+    }
     setCurrentParentId(id);
     loadCategories(id);
-  };
-
-  const handleGoBack = () => {
-    const newHistory = [...history];
-    const prevParentId = newHistory.pop() || null;
-    setHistory(newHistory);
-    setCurrentParentId(prevParentId);
-    loadCategories(prevParentId);
   };
 
   const handleAddOrEdit = async (data: any) => {
@@ -101,177 +95,126 @@ const App: React.FC = () => {
       const response = editingCategory 
         ? await apiService.editCategory(editingCategory.id, data)
         : await apiService.addCategory(data);
-
       if (response && response.success) {
         setIsModalOpen(false);
         setEditingCategory(null);
         loadCategories(currentParentId);
       }
     } catch (err) {
-      alert("Xatolik yuz berdi");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (confirm('Kategoriyani o‘chirmoqchimisiz?')) {
-      try {
-        const response = await apiService.deleteCategory(id);
-        if (response && response.success) {
-          loadCategories(currentParentId);
-        }
-      } catch (err) {
-        alert("O'chirishda xatolik");
-      }
+      alert("Xato yuz berdi");
     }
   };
 
   const filteredCategories = categories.filter(c => 
-    c.nameUz.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.nameEn && c.nameEn.toLowerCase().includes(searchQuery.toLowerCase()))
+    c.nameUz.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (authStatus === 'loading') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-slate-950 p-6 text-center">
-        <div className="relative mb-8 w-24 h-24">
-          <div className="absolute inset-0 border-4 border-indigo-600/10 dark:border-indigo-400/10 rounded-[2.5rem]"></div>
-          <div className="absolute inset-0 border-4 border-t-indigo-600 dark:border-t-indigo-400 rounded-[2.5rem] animate-spin"></div>
-          <Loader2 className="absolute inset-0 m-auto text-indigo-600 dark:text-indigo-400 animate-pulse" size={40} />
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-indigo-600" size={48} />
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Yuklanmoqda...</p>
         </div>
-        <h2 className="text-2xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent mb-2 tracking-tighter">Shop Admin Pro</h2>
-        <p className="text-slate-400 text-sm font-black uppercase tracking-widest">Ma'lumotlar yuklanmoqda...</p>
-      </div>
-    );
-  }
-
-  if (authStatus === 'error') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-950 text-center">
-        <div className="w-28 h-28 rounded-[3rem] bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-500 mb-8 shadow-2xl border-2 border-amber-100 dark:border-amber-900/50">
-          <WifiOff size={56} />
-        </div>
-        <h1 className="text-3xl font-black mb-4 tracking-tight">Ulanish xatosi</h1>
-        <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-4 text-xl leading-relaxed">
-          Backend serverga (ngrok) ulanib bo'lmadi.
-        </p>
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-2xl mb-8 font-mono text-sm">
-          {errorMessage}
-        </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-12 py-5 bg-indigo-600 text-white rounded-[2rem] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 text-lg"
-        >
-          Qayta yuklash
-        </button>
       </div>
     );
   }
 
   if (authStatus === 'unauthorized') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-950 text-center">
-        <div className="w-28 h-28 rounded-[3rem] bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-500 mb-8 shadow-2xl border-2 border-rose-100 dark:border-rose-900/50">
-          <ShieldAlert size={56} />
-        </div>
-        <h1 className="text-4xl font-black mb-4 tracking-tight">Ruxsat yo'q</h1>
-        <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-12 text-xl leading-relaxed">
-          Sizda ushbu panelga kirish huquqi yo'q yoki <code className="bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded">chat_id</code> noto'g'ri.
-        </p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-12 py-5 bg-indigo-600 text-white rounded-[2rem] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 text-lg"
-        >
-          Qayta urinish
-        </button>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 text-center">
+        <ShieldAlert size={64} className="text-rose-500 mb-6" />
+        <h1 className="text-2xl font-bold mb-2">Ruxsat yo'q</h1>
+        <p className="text-slate-500 mb-8 max-w-xs">Admin panelga kirish uchun maxsus linkdan foydalaning.</p>
+        <button onClick={() => window.location.reload()} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Qayta yuklash</button>
       </div>
     );
   }
 
   return (
-    <Layout theme={theme} toggleTheme={toggleTheme} onLogout={() => window.location.reload()}>
-      <div className="flex flex-col gap-10 pb-20">
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-[2rem] text-white shadow-2xl flex items-center justify-center transform hover:rotate-6 transition-transform">
-                <LayoutGrid size={40} strokeWidth={2.5} />
-              </div>
-              <div>
-                <h2 className="text-4xl font-black tracking-tight leading-none mb-2">Shop Bo'limlari</h2>
-                <div className="flex items-center gap-2">
-                   <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-wider">
-                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                     {currentUser?.firstname || 'Admin'}
-                   </div>
-                   <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                     • {currentParentId ? 'Ichki bo\'limlar' : 'Asosiy menyu'}
-                   </span>
-                </div>
-              </div>
+    <Layout theme={theme} toggleTheme={toggleTheme} onLogout={() => window.location.reload()} currentUserFirstName={currentUser?.firstname}>
+      <div className="flex flex-col gap-6">
+        {/* Breadcrumb & Header */}
+        <div className="flex flex-col gap-4">
+          <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+            <button onClick={() => navigateTo(null)} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
+              <Home size={14} />
+              <span>Root</span>
+            </button>
+            {breadcrumb.map((b, i) => (
+              <React.Fragment key={b.id}>
+                <ChevronRight size={12} className="text-slate-300" />
+                <button 
+                  onClick={() => navigateTo(b.id, b.name)}
+                  className={`hover:text-indigo-600 transition-colors ${i === breadcrumb.length - 1 ? 'text-indigo-600 font-bold' : ''}`}
+                >
+                  {b.name}
+                </button>
+              </React.Fragment>
+            ))}
+          </nav>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                {breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Kategoriyalar'}
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Jami {categories.length} ta bo'lim mavjud</p>
             </div>
-            {currentParentId && (
-              <button 
-                onClick={handleGoBack}
-                className="group flex items-center gap-2 text-sm font-black bg-white dark:bg-slate-900 px-8 py-5 rounded-[1.8rem] border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-500 transition-all shadow-sm"
-              >
-                <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
-                Orqaga
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-all" size={28} />
+            
+            <div className="relative group max-w-xs w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
               <input 
                 type="text"
-                placeholder="Mahsulot bo'limlarini qidirish..."
-                className="w-full pl-20 pr-10 py-6 rounded-[2.5rem] bg-white dark:bg-slate-900 border-2 border-transparent focus:border-indigo-500/50 outline-none transition-all font-bold text-xl text-slate-700 dark:text-slate-200 shadow-xl shadow-slate-100/50 dark:shadow-none"
+                placeholder="Bo'limni qidirish..."
+                className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <button 
-              onClick={() => { setEditingCategory(null); setIsModalOpen(true); }}
-              className="px-14 py-6 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black rounded-[2.5rem] flex items-center justify-center gap-3 hover:shadow-2xl hover:shadow-indigo-600/40 active:scale-95 transition-all whitespace-nowrap text-xl border-t border-white/20"
-            >
-              <Plus size={32} strokeWidth={3} />
-              Qo'shish
-            </button>
           </div>
         </div>
 
+        {/* Content Area */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-60 bg-white dark:bg-slate-900 rounded-[3rem] animate-pulse border-2 border-slate-50 dark:border-slate-800" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-44 bg-white dark:bg-slate-900 rounded-2xl animate-pulse border border-slate-100 dark:border-slate-800" />
             ))}
           </div>
         ) : filteredCategories.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {filteredCategories.map((category, idx) => (
-              <div key={category.id} className="animate-in fade-in slide-in-from-bottom duration-700 fill-mode-both" style={{ animationDelay: `${idx * 100}ms` }}>
-                <CategoryCard 
-                  category={category} 
-                  onSelect={handleSelectCategory}
-                  onEdit={(cat) => { setEditingCategory(cat); setIsModalOpen(true); }}
-                  onDelete={handleDelete}
-                />
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCategories.map(cat => (
+              <CategoryCard 
+                key={cat.id} 
+                category={cat} 
+                onSelect={(id) => navigateTo(id, cat.nameUz)}
+                onEdit={(c) => { setEditingCategory(c); setIsModalOpen(true); }}
+                onDelete={async (id) => {
+                  if (confirm('O\'chirmoqchimisiz?')) {
+                    const res = await apiService.deleteCategory(id);
+                    if (res.success) loadCategories(currentParentId);
+                  }
+                }}
+              />
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-40 text-center glass rounded-[4rem] border-dashed border-4 border-slate-200 dark:border-slate-800">
-            <div className="w-32 h-32 rounded-[4rem] bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-400 mb-10 animate-bounce">
-              <Sparkles size={72} />
-            </div>
-            <h3 className="text-4xl font-black mb-4 tracking-tight">Hozircha hech narsa yo'q</h3>
-            <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto px-8 text-xl font-medium leading-relaxed">
-              Bu bo'limda hali shop kategoriyalari yaratilmagan. Yuqoridagi "Qo'shish" tugmasini bosing.
-            </p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Package size={64} className="text-slate-200 dark:text-slate-800 mb-4" />
+            <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300">Bo'limlar mavjud emas</h3>
+            <p className="text-sm text-slate-400">Yangi bo'lim yaratish uchun + tugmasini bosing</p>
           </div>
         )}
       </div>
+
+      {/* Floating Action Button */}
+      <button 
+        onClick={() => { setEditingCategory(null); setIsModalOpen(true); }}
+        className="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all z-50 border-4 border-white dark:border-slate-950"
+      >
+        <Plus size={32} strokeWidth={3} />
+      </button>
 
       <CategoryModal 
         isOpen={isModalOpen}
@@ -280,16 +223,6 @@ const App: React.FC = () => {
         initialData={editingCategory}
         parentId={currentParentId}
       />
-
-      <div className="fixed bottom-12 left-0 right-0 px-8 sm:hidden z-40">
-        <button 
-          onClick={() => { setEditingCategory(null); setIsModalOpen(true); }}
-          className="w-full py-6 bg-indigo-600 text-white font-black rounded-[2.5rem] flex items-center justify-center gap-4 shadow-2xl active:scale-90 transition-all border-t-2 border-white/20 text-2xl"
-        >
-          <Plus size={36} strokeWidth={4} />
-          Yangi Bo'lim
-        </button>
-      </div>
     </Layout>
   );
 };
