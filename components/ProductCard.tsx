@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Edit3, Trash2, Tag, ShoppingBag, Layers, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Edit3, Trash2, ShoppingBag, Package, Layers, ChevronRight } from 'lucide-react';
 import { Product } from '../types';
 
 interface ProductCardProps {
@@ -10,7 +10,10 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDelete }) => {
-  const primaryType = product.types?.[0];
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const variants = product.types || [];
+  const currentVariant = variants[activeIdx];
   
   const calculateDiscountPrice = (basePrice: number) => {
     if (product.discountType === 'NONE' || !product.discountValue) return basePrice;
@@ -20,22 +23,53 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
   };
 
   const hasDiscount = product.discountType !== 'NONE' && product.discountValue;
-  const totalStock = product.types?.reduce((acc, t) => acc + t.stock, 0) || 0;
-  
-  // Find min/max price for multi-variant products
-  const prices = product.types?.map(t => t.price) || [];
-  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const scrollLeft = scrollRef.current.scrollLeft;
+      const width = scrollRef.current.offsetWidth;
+      const newIndex = Math.round(scrollLeft / (width * 0.85)); // 0.85 is the peek width ratio
+      if (newIndex !== activeIdx && newIndex >= 0 && newIndex < variants.length) {
+        setActiveIdx(newIndex);
+      }
+    }
+  };
 
   return (
-    <div className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden shadow-sm hover:shadow-premium transition-all duration-300">
-      <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-slate-800">
-        <img 
-          src={primaryType?.imageUrl || 'https://via.placeholder.com/400?text=No+Variants'} 
-          alt={product.nameUz} 
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-        />
-        <div className="absolute top-4 left-4 flex flex-col gap-2">
+    <div className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden shadow-sm hover:shadow-premium transition-all duration-500">
+      {/* Scrollable Peek Carousel */}
+      <div className="relative">
+        <div 
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar py-2"
+          style={{ scrollBehavior: 'smooth' }}
+        >
+          {variants.length > 0 ? variants.map((v, i) => (
+            <div 
+              key={v.id || i} 
+              className="flex-none snap-center pl-4 first:pl-4 last:pr-12"
+              style={{ width: variants.length > 1 ? '85%' : '100%' }}
+            >
+              <div className="aspect-square rounded-[2rem] overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-800/50 shadow-sm transition-transform duration-500 group-hover:scale-[1.02]">
+                <img 
+                  src={v.imageUrl || 'https://via.placeholder.com/400?text=Rasm+Mavjud+Emas'} 
+                  alt={v.nameUz} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          )) : (
+            <div className="w-full px-4">
+               <div className="aspect-square rounded-[2rem] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Package size={48} className="text-slate-300" />
+               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Top Badges */}
+        <div className="absolute top-6 left-8 flex flex-col gap-2 z-10">
           <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-sm border border-white/20 ${
             product.status === 'OPEN' ? 'bg-emerald-500/80 text-white' : 
             product.status === 'CLOSED' ? 'bg-amber-500/80 text-white' : 'bg-rose-500/80 text-white'
@@ -43,59 +77,87 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, onDel
             {product.status}
           </span>
           {hasDiscount && (
-            <span className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-600/80 text-white backdrop-blur-md border border-white/20 shadow-sm">
+            <span className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-600/80 text-white backdrop-blur-md border border-white/20 shadow-sm animate-pulse">
               {product.discountType === 'PERCENT' ? `-${product.discountValue}%` : `-${product.discountValue?.toLocaleString()} so'm`}
             </span>
           )}
         </div>
+
+        {/* Variant Indicators / Dots */}
+        {variants.length > 1 && (
+          <div className="flex justify-center gap-1.5 mt-2 mb-2">
+            {variants.map((_, i) => (
+              <div 
+                key={i} 
+                className={`h-1 rounded-full transition-all duration-300 ${i === activeIdx ? 'w-6 bg-indigo-500' : 'w-2 bg-slate-200 dark:bg-slate-800'}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="p-6">
+      {/* Content Section */}
+      <div className="p-6 pt-2">
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-1">
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order: {product.orderIndex}</span>
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">•</span>
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stock: {totalStock}</span>
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">•</span>
-             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Variants: {product.types?.length || 0}</span>
+          <div className="flex items-center gap-2 mb-2">
+             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+               <Package size={12} className="text-slate-400" />
+               <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">{currentVariant?.stock || 0} mavjud</span>
+             </div>
+             {variants.length > 1 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+                  <Layers size={12} className="text-indigo-400" />
+                  <span className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase">{activeIdx + 1} / {variants.length} tur</span>
+                </div>
+             )}
           </div>
-          <h3 className="text-xl font-black text-slate-900 dark:text-white line-clamp-1 uppercase tracking-tight">{product.nameUz}</h3>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 min-h-[2.5rem]">{product.descriptionUz}</p>
+          
+          <h3 className="text-xl font-black text-slate-900 dark:text-white line-clamp-1 uppercase tracking-tight mb-1">
+            {product.nameUz}
+          </h3>
+          <div className="flex items-center gap-2 mb-3">
+             <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest truncate">
+               {currentVariant?.nameUz || 'Asosiy variant'}
+             </p>
+             {variants.length > 1 && <ChevronRight size={12} className="text-slate-300" />}
+          </div>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2 min-h-[2.5rem] leading-relaxed">
+            {product.descriptionUz}
+          </p>
         </div>
 
         <div className="flex items-end justify-between mb-6">
           <div className="flex flex-col">
-            {hasDiscount && prices.length > 0 && (
-              <span className="text-xs font-bold text-slate-400 line-through tracking-tighter decoration-rose-500/50">
-                {minPrice === maxPrice ? minPrice.toLocaleString() : `${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()}`} so'm
+            {hasDiscount && currentVariant && (
+              <span className="text-xs font-bold text-slate-400 line-through tracking-tighter decoration-rose-500/50 mb-0.5">
+                {currentVariant.price.toLocaleString()} so'm
               </span>
             )}
-            <span className="text-xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">
-              {prices.length > 0 ? (
-                minPrice === maxPrice 
-                  ? `${calculateDiscountPrice(minPrice).toLocaleString()}` 
-                  : `${calculateDiscountPrice(minPrice).toLocaleString()} - ${calculateDiscountPrice(maxPrice).toLocaleString()}`
-              ) : '0'} <span className="text-xs uppercase ml-1">so'm</span>
-            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                {currentVariant ? calculateDiscountPrice(currentVariant.price).toLocaleString() : '0'}
+              </span>
+              <span className="text-[10px] uppercase text-slate-400 font-black tracking-widest">so'm</span>
+            </div>
           </div>
-          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl text-slate-400">
-            <ShoppingBag size={18} />
-          </div>
+          <button className="w-12 h-12 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all">
+            <ShoppingBag size={20} />
+          </button>
         </div>
 
-        <div className="flex gap-2">
+        <div className="grid grid-cols-5 gap-2">
           <button 
             onClick={() => onEdit(product)}
-            className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 flex items-center justify-center gap-2"
+            className="col-span-4 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-[0.15em] hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-200/50 dark:border-slate-700/50"
           >
             <Edit3 size={14} />
             Tahrirlash
           </button>
           <button 
             onClick={() => onDelete(product.id)}
-            className="w-14 py-3.5 bg-rose-50 dark:bg-rose-950/30 text-rose-500 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-95"
+            className="col-span-1 py-4 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/30"
           >
-            <Trash2 size={16} />
+            <Trash2 size={18} />
           </button>
         </div>
       </div>
