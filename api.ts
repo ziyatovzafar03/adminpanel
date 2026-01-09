@@ -105,30 +105,9 @@ export const apiService = {
     });
     return handleResponse(response);
   },
-  async restoreProduct(id: string): Promise<ApiResponse<Product>> {
-    const response = await fetch(`${BASE_URL}/api/product/restore-product/${id}`, {
-      method: 'PUT',
-      headers: getHeaders()
-    });
-    return handleResponse(response);
-  },
-
-  // Product Filtering APIs
-  async getActiveProducts(categoryId: string): Promise<ApiResponse<Product[]>> {
-    const response = await fetch(`${BASE_URL}/api/product/active-products/${categoryId}`, { headers: getHeaders() });
-    return handleResponse(response);
-  },
-  async getClosedProducts(categoryId: string): Promise<ApiResponse<Product[]>> {
-    const response = await fetch(`${BASE_URL}/api/product/closed-products/${categoryId}`, { headers: getHeaders() });
-    return handleResponse(response);
-  },
-  async getDeletedProducts(categoryId: string): Promise<ApiResponse<Product[]>> {
-    const response = await fetch(`${BASE_URL}/api/product/delete-products/${categoryId}`, { headers: getHeaders() });
-    return handleResponse(response);
-  },
 
   // Product Type (Variant) APIs
-  async addProductType(data: AddProductTypeRequest): Promise<ApiResponse<Product>> {
+  async addProductType(data: AddProductTypeRequest): Promise<ApiResponse<any>> {
     const response = await fetch(`${BASE_URL}/api/product/add-product-type`, {
       method: 'POST',
       headers: getHeaders(),
