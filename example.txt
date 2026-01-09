@@ -1,11 +1,12 @@
-Admin panelga kirish uchun quyidagi havolalardan foydalanishingiz mumkin:
+Lokal (Local Development) muhitida ishga tushirish uchun:
 
-1. To'g'ridan-to'g'ri (avtomatik redirect bilan):
-https://codebyz.com/
+1. Asosiy havola (avtomatik default ID bilan):
+http://localhost:3000/
 
-(Tizim avtomatik ravishda https://codebyz.com/?chat_id=7882316826 manziliga yo'naltiradi)
+2. Admin havolasi (Sizning chat_id bilan):
+http://localhost:3000/?chat_id=7882316826
 
-2. Maxsus chat_id bilan:
-https://codebyz.com/?chat_id={Sizning_Chat_ID}
+Eslatma: Agar brauzerda "Ruxsat yo'q" (Unauthorized) xabari chiqsa, URL oxiriga ?chat_id=7882316826 ni qo'shganingizga ishonch hosil qiling, chunki tizim faqat CONFIRMED statusdagi foydalanuvchilarni kiritadi.
 
-Eslatma: Agar chat_id ko'rsatilmadi, tizim avtomatik ravishda 7882316826 ID-dan foydalanadi va URL-ni yangilaydi. Barcha API so'rovlari https://codebyz.com orqali yuboriladi.
+Production muhiti uchun:
+https://codebyz.com/?chat_id=7882316826

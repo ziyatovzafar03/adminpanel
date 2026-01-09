@@ -1,7 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Save, Info } from 'lucide-react';
-import { Category, CategoryCreateRequest, CategoryEditRequest, Status } from '../types';
+import { X, Save, Info, Sparkles, Loader2 } from 'lucide-react';
+import { Category, Status } from '../types';
+import { GoogleGenAI } from "@google/genai";
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
     orderIndex: 0,
     status: 'OPEN' as Status,
   });
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -43,6 +45,37 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
     }
   }, [initialData, isOpen]);
 
+  const handleAiFill = async () => {
+    if (!formData.nameUz) {
+      alert("Iltimos, avval o'zbekcha nomni kiriting!");
+      return;
+    }
+
+    setIsAiLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: (process.env as any).API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Quyidagi o'zbekcha shop kategoriyasi nomini boshqa tillarga tarjima qilib JSON formatda qaytar: "${formData.nameUz}". 
+        Format: {"cyrillic": "...", "ru": "...", "en": "..."}`,
+        config: { responseMimeType: "application/json" }
+      });
+
+      const result = JSON.parse(response.text || '{}');
+      setFormData(prev => ({
+        ...prev,
+        nameUzCyrillic: result.cyrillic || prev.nameUzCyrillic,
+        nameRu: result.ru || prev.nameRu,
+        nameEn: result.en || prev.nameEn
+      }));
+    } catch (error) {
+      console.error("AI Fill error:", error);
+      alert("AI bilan to'ldirishda xatolik yuz berdi.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,105 +87,133 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
     onSubmit(payload);
   };
 
-  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none text-sm";
-  const labelClass = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 px-1";
+  const inputClass = "w-full px-5 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-base font-medium";
+  const labelClass = "block text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] mb-2 px-1";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
       
-      <div className="relative w-full max-w-xl glass rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-300">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            {initialData ? 'Edit Category' : 'Create Category'}
-          </h2>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <X size={20} />
+      <div className="relative w-full max-w-2xl glass rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border-t-2 border-white/20 dark:border-white/5">
+        <div className="flex items-center justify-between p-8 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h2 className="text-2xl font-black tracking-tight mb-1">
+              {initialData ? 'Bo\'limni tahrirlash' : 'Yangi bo\'lim yaratish'}
+            </h2>
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Shop Kategoriya Boshqaruvi</p>
+          </div>
+          <button onClick={onClose} className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white transition-all shadow-inner">
+            <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-            <div>
-              <label className={labelClass}>Name (Uzbek)</label>
-              <input 
-                required
-                className={inputClass}
-                value={formData.nameUz}
-                onChange={(e) => setFormData({...formData, nameUz: e.target.value})}
-                placeholder="Masalan: Dasturlash"
-              />
+        <form onSubmit={handleSubmit} className="p-8 max-h-[75vh] overflow-y-auto">
+          <div className="space-y-6">
+            <div className="relative">
+              <label className={labelClass}>Nom (O'zbekcha)</label>
+              <div className="flex gap-3">
+                <input 
+                  required
+                  className={inputClass}
+                  value={formData.nameUz}
+                  onChange={(e) => setFormData({...formData, nameUz: e.target.value})}
+                  placeholder="Masalan: Maishiy texnika"
+                />
+                <button
+                  type="button"
+                  onClick={handleAiFill}
+                  disabled={isAiLoading}
+                  className="px-6 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white font-black hover:shadow-lg hover:shadow-indigo-600/30 transition-all active:scale-90 disabled:opacity-50 flex items-center justify-center min-w-[64px]"
+                >
+                  {isAiLoading ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
+                </button>
+              </div>
             </div>
-            <div>
-              <label className={labelClass}>Name (Uzbek Cyrillic)</label>
-              <input 
-                className={inputClass}
-                value={formData.nameUzCyrillic}
-                onChange={(e) => setFormData({...formData, nameUzCyrillic: e.target.value})}
-                placeholder="Масалан: Дастурлаш"
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className={labelClass}>Kirillcha (O'zbekcha)</label>
+                <input 
+                  className={inputClass}
+                  value={formData.nameUzCyrillic}
+                  onChange={(e) => setFormData({...formData, nameUzCyrillic: e.target.value})}
+                  placeholder="Маиший техника"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Ruscha (Russian)</label>
+                <input 
+                  className={inputClass}
+                  value={formData.nameRu}
+                  onChange={(e) => setFormData({...formData, nameRu: e.target.value})}
+                  placeholder="Бытовая техника"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Inglizcha (English)</label>
+                <input 
+                  className={inputClass}
+                  value={formData.nameEn}
+                  onChange={(e) => setFormData({...formData, nameEn: e.target.value})}
+                  placeholder="Home Appliances"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Tartib (Index)</label>
+                <input 
+                  type="number"
+                  className={inputClass}
+                  value={formData.orderIndex}
+                  onChange={(e) => setFormData({...formData, orderIndex: parseInt(e.target.value) || 0})}
+                />
+              </div>
             </div>
+
             <div>
-              <label className={labelClass}>Name (Russian)</label>
-              <input 
-                className={inputClass}
-                value={formData.nameRu}
-                onChange={(e) => setFormData({...formData, nameRu: e.target.value})}
-                placeholder="Например: Программирование"
-              />
+              <label className={labelClass}>Holat (Status)</label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, status: 'OPEN'})}
+                  className={`py-4 rounded-2xl font-black text-sm uppercase tracking-widest border-2 transition-all ${formData.status === 'OPEN' ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-transparent border-slate-100 dark:border-slate-800 text-slate-400'}`}
+                >
+                  Ochiq (Open)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({...formData, status: 'CLOSED'})}
+                  className={`py-4 rounded-2xl font-black text-sm uppercase tracking-widest border-2 transition-all ${formData.status === 'CLOSED' ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-500/20' : 'bg-transparent border-slate-100 dark:border-slate-800 text-slate-400'}`}
+                >
+                  Yopiq (Closed)
+                </button>
+              </div>
             </div>
-            <div>
-              <label className={labelClass}>Name (English)</label>
-              <input 
-                className={inputClass}
-                value={formData.nameEn}
-                onChange={(e) => setFormData({...formData, nameEn: e.target.value})}
-                placeholder="Example: Programming"
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Order Index</label>
-              <input 
-                type="number"
-                className={inputClass}
-                value={formData.orderIndex}
-                onChange={(e) => setFormData({...formData, orderIndex: parseInt(e.target.value) || 0})}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Status</label>
-              <select
-                className={inputClass}
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value as Status})}
-              >
-                <option value="OPEN">Open</option>
-                <option value="CLOSED">Closed</option>
-              </select>
+
+            <div className="p-6 rounded-[2rem] bg-indigo-50/50 dark:bg-indigo-900/10 border-2 border-indigo-100/50 dark:border-indigo-800/30 flex gap-4 items-start">
+               <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg">
+                 <Info size={20} />
+               </div>
+               <p className="text-sm font-bold text-indigo-700/80 dark:text-indigo-300/80 leading-relaxed">
+                 Kategoriya darajasi: <span className="underline decoration-indigo-400">{parentId ? 'Pastki bo\'lim' : 'Asosiy bo\'lim'}</span>. 
+                 AI tugmasidan foydalanib tarjimalarni avtomatik to'ldirishingiz mumkin.
+               </p>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 mb-6 flex gap-3">
-             <Info className="text-indigo-600 dark:text-indigo-400 shrink-0" size={20} />
-             <p className="text-sm text-indigo-700 dark:text-indigo-300">
-               Categorizing correctly helps users find content faster. Parent ID will be set to <b>{parentId ? 'Child' : 'Root'}</b> level.
-             </p>
-          </div>
-
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-4 mt-10">
             <button 
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-800 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              className="flex-1 py-5 px-8 rounded-2xl bg-slate-100 dark:bg-slate-800 font-black uppercase tracking-widest text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
             >
-              Cancel
+              Bekor qilish
             </button>
             <button 
               type="submit"
-              className="flex-[2] py-3 px-4 rounded-xl bg-indigo-600 text-white font-semibold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/30"
+              className="flex-[2] py-5 px-8 rounded-2xl bg-indigo-600 text-white font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-600/40 active:scale-95 border-t border-white/20"
             >
-              <Save size={18} />
-              {initialData ? 'Save Changes' : 'Create Category'}
+              <Save size={20} strokeWidth={3} />
+              {initialData ? 'O\'zgarishlarni saqlash' : 'Bo\'limni yaratish'}
             </button>
           </div>
         </form>

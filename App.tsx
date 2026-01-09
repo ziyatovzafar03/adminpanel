@@ -43,8 +43,6 @@ const App: React.FC = () => {
         const chatId = urlParams.get('chat_id') || DEFAULT_CHAT_ID;
         
         const response = await apiService.fetchUserByChatId(chatId);
-        
-        // API javobi ResponseDto formatida bo'lsa (success/data) yoki to'g'ridan-to'g'ri ob'ekt bo'lsa ham tekshiramiz
         const userData = response.success ? response.data : (response as any);
 
         if (userData && userData.status === 'CONFIRMED') {
@@ -52,11 +50,9 @@ const App: React.FC = () => {
           setAuthStatus('authorized');
           loadCategories(null);
         } else {
-          console.warn("Auth check failed. User data:", userData);
           setAuthStatus('unauthorized');
         }
       } catch (err) {
-        console.error("Auth process error:", err);
         setAuthStatus('unauthorized');
       }
     };
@@ -137,8 +133,8 @@ const App: React.FC = () => {
           <div className="absolute inset-0 border-4 border-t-indigo-600 dark:border-t-indigo-400 rounded-[2.5rem] animate-spin"></div>
           <Loader2 className="absolute inset-0 m-auto text-indigo-600 dark:text-indigo-400 animate-pulse" size={40} />
         </div>
-        <h2 className="text-2xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent mb-2">Tizim yuklanmoqda</h2>
-        <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Xavfsiz ulanish tekshirilmoqda...</p>
+        <h2 className="text-2xl font-black bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent mb-2 tracking-tighter">Shop Admin Pro</h2>
+        <p className="text-slate-400 text-sm font-black uppercase tracking-widest">Xavfsiz ulanish tekshirilmoqda...</p>
       </div>
     );
   }
@@ -146,16 +142,16 @@ const App: React.FC = () => {
   if (authStatus === 'unauthorized') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-950 text-center">
-        <div className="w-24 h-24 rounded-[2.5rem] bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-500 mb-8 shadow-2xl">
+        <div className="w-28 h-28 rounded-[3rem] bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-500 mb-8 shadow-2xl border-2 border-rose-100 dark:border-rose-900/50">
           <ShieldAlert size={56} />
         </div>
-        <h1 className="text-3xl font-black mb-4 tracking-tight">Ruxsat berilmagan</h1>
-        <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-12 text-lg">
-          Sizning statusiningiz 'CONFIRMED' emas yoki chat_id noto'g'ri. Iltimos, administrator bilan bog'laning.
+        <h1 className="text-4xl font-black mb-4 tracking-tight">Ruxsat yo'q</h1>
+        <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-12 text-xl leading-relaxed">
+          Ushbu do'kon boshqaruv paneliga kirish uchun administrator ruxsati (CONFIRMED) talab qilinadi.
         </p>
         <button 
           onClick={() => window.location.reload()}
-          className="px-12 py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30"
+          className="px-12 py-5 bg-indigo-600 text-white rounded-[2rem] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 text-lg"
         >
           Qayta urinish
         </button>
@@ -168,14 +164,15 @@ const App: React.FC = () => {
       <div className="flex flex-col gap-10 pb-20">
         <div className="flex flex-col gap-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 bg-indigo-600 rounded-[1.5rem] text-white shadow-xl flex items-center justify-center">
-                <LayoutGrid size={32} />
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-[2rem] text-white shadow-2xl flex items-center justify-center transform hover:rotate-6 transition-transform">
+                <LayoutGrid size={40} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-3xl font-black tracking-tight leading-none mb-2">Kategoriyalar</h2>
+                <h2 className="text-4xl font-black tracking-tight leading-none mb-2">Shop Bo'limlari</h2>
                 <div className="flex items-center gap-2">
-                   <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-black uppercase tracking-wider">
+                   <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-wider">
+                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                      {currentUser?.firstname || 'Admin'}
                    </div>
                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -187,30 +184,30 @@ const App: React.FC = () => {
             {currentParentId && (
               <button 
                 onClick={handleGoBack}
-                className="flex items-center gap-2 text-sm font-black bg-white dark:bg-slate-900 px-6 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-500 transition-all"
+                className="group flex items-center gap-2 text-sm font-black bg-white dark:bg-slate-900 px-8 py-5 rounded-[1.8rem] border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-500 transition-all shadow-sm"
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
                 Orqaga
               </button>
             )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={24} />
+            <div className="relative flex-1 group">
+              <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-all" size={28} />
               <input 
                 type="text"
-                placeholder="Qidiruv..."
-                className="w-full pl-16 pr-8 py-5 rounded-[2rem] bg-white dark:bg-slate-900 border-2 border-transparent focus:border-indigo-500/50 outline-none transition-all font-bold text-lg"
+                placeholder="Mahsulot bo'limlarini qidirish..."
+                className="w-full pl-20 pr-10 py-6 rounded-[2.5rem] bg-white dark:bg-slate-900 border-2 border-transparent focus:border-indigo-500/50 outline-none transition-all font-bold text-xl text-slate-700 dark:text-slate-200 shadow-xl shadow-slate-100/50 dark:shadow-none"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <button 
               onClick={() => { setEditingCategory(null); setIsModalOpen(true); }}
-              className="px-10 py-5 bg-indigo-600 text-white font-black rounded-[2rem] flex items-center justify-center gap-3 hover:bg-indigo-700 shadow-xl shadow-indigo-600/30"
+              className="px-14 py-6 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black rounded-[2.5rem] flex items-center justify-center gap-3 hover:shadow-2xl hover:shadow-indigo-600/40 active:scale-95 transition-all whitespace-nowrap text-xl border-t border-white/20"
             >
-              <Plus size={28} />
+              <Plus size={32} strokeWidth={3} />
               Qo'shish
             </button>
           </div>
@@ -219,27 +216,30 @@ const App: React.FC = () => {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-48 bg-white dark:bg-slate-900 rounded-[3rem] animate-pulse" />
+              <div key={i} className="h-60 bg-white dark:bg-slate-900 rounded-[3rem] animate-pulse border-2 border-slate-50 dark:border-slate-800" />
             ))}
           </div>
         ) : filteredCategories.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {filteredCategories.map((category) => (
-              <CategoryCard 
-                key={category.id}
-                category={category} 
-                onSelect={handleSelectCategory}
-                onEdit={(cat) => { setEditingCategory(cat); setIsModalOpen(true); }}
-                onDelete={handleDelete}
-              />
+            {filteredCategories.map((category, idx) => (
+              <div key={category.id} className="animate-in fade-in slide-in-from-bottom duration-700 fill-mode-both" style={{ animationDelay: `${idx * 100}ms` }}>
+                <CategoryCard 
+                  category={category} 
+                  onSelect={handleSelectCategory}
+                  onEdit={(cat) => { setEditingCategory(cat); setIsModalOpen(true); }}
+                  onDelete={handleDelete}
+                />
+              </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-32 text-center glass rounded-[4rem] border-dashed border-4 border-slate-200 dark:border-slate-800">
-            <Sparkles size={64} className="text-indigo-400 mb-6" />
-            <h3 className="text-3xl font-black mb-4">Ma'lumot topilmadi</h3>
-            <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto px-8 text-xl">
-              Hali bu bo'limda hech qanday kategoriya yaratilmagan.
+          <div className="flex flex-col items-center justify-center py-40 text-center glass rounded-[4rem] border-dashed border-4 border-slate-200 dark:border-slate-800">
+            <div className="w-32 h-32 rounded-[4rem] bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-400 mb-10 animate-bounce">
+              <Sparkles size={72} />
+            </div>
+            <h3 className="text-4xl font-black mb-4 tracking-tight">Hozircha hech narsa yo'q</h3>
+            <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto px-8 text-xl font-medium leading-relaxed">
+              Bu bo'limda hali shop kategoriyalari yaratilmagan. Yuqoridagi "Qo'shish" tugmasini bosing.
             </p>
           </div>
         )}
@@ -253,12 +253,12 @@ const App: React.FC = () => {
         parentId={currentParentId}
       />
 
-      <div className="fixed bottom-10 left-0 right-0 px-8 sm:hidden z-40">
+      <div className="fixed bottom-12 left-0 right-0 px-8 sm:hidden z-40">
         <button 
           onClick={() => { setEditingCategory(null); setIsModalOpen(true); }}
-          className="w-full py-5 bg-indigo-600 text-white font-black rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-transform"
+          className="w-full py-6 bg-indigo-600 text-white font-black rounded-[2.5rem] flex items-center justify-center gap-4 shadow-2xl active:scale-90 transition-all border-t-2 border-white/20 text-2xl"
         >
-          <Plus size={32} />
+          <Plus size={36} strokeWidth={4} />
           Yangi Bo'lim
         </button>
       </div>
