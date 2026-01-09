@@ -1,5 +1,6 @@
 
 export type Status = 'OPEN' | 'CLOSED';
+export type UserStatus = 'CONFIRMED' | 'PENDING' | 'REJECTED';
 
 export interface Category {
   id: string;
@@ -38,6 +39,11 @@ export interface ApiResponse<T> {
 }
 
 export interface UserAuthData {
-  exists: boolean;
-  chatId?: number;
+  id: string;
+  firstname: string;
+  lastname: string;
+  username: string;
+  chatId: number;
+  status: UserStatus;
+  categoryId: string | null;
 }
