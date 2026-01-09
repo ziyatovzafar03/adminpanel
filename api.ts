@@ -1,28 +1,25 @@
-
 import { ApiResponse, Category, CategoryCreateRequest, CategoryEditRequest, UserAuthData } from './types';
 
 // DIQQAT: Agar backend manzilingiz o'zgargan bo'lsa, ushbu URLni yangilang!
 const BASE_URL = 'https://4bdf137143e3.ngrok-free.app';
 
-// ngrok brauzer ogohlantirishini chetlab o'tish uchun maxsus header
 const getHeaders = () => ({
   'Content-Type': 'application/json',
-  'ngrok-skip-browser-warning': '69420',
+  'ngrok-skip-browser-warning': 'true',
   'Accept': 'application/json'
 });
 
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`API Error (${response.status}):`, errorText);
-    throw new Error(`Server xatosi: ${response.status}`);
+    const errorBody = await response.text().catch(() => 'Noma\'lum xatolik');
+    throw new Error(`Server xatosi (${response.status}): ${errorBody}`);
   }
-  return response.json();
+  const json = await response.json();
+  return json;
 };
 
 export const apiService = {
   async fetchUserByChatId(chatId: string): Promise<ApiResponse<UserAuthData>> {
-    console.log(`Fetching user: ${chatId}`);
     const response = await fetch(`${BASE_URL}/api/user/find-by-chat-id?chat_id=${chatId}`, { 
       headers: getHeaders() 
     });

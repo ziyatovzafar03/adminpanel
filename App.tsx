@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, ChevronRight, Home, Search, ShieldAlert, Loader2, Package, WifiOff } from 'lucide-react';
+import { Plus, ChevronRight, Home, Search, ShieldAlert, Loader2, Package, WifiOff, RefreshCcw } from 'lucide-react';
 import { apiService } from './api';
 import { Category, UserAuthData } from './types';
 import { Layout } from './components/Layout';
@@ -39,15 +38,14 @@ const App: React.FC = () => {
   useEffect(() => {
     const initApp = async () => {
       try {
-        // Path variable orqali chat_id ni olish (masalan: /12345678)
         const pathSegments = window.location.pathname.split('/').filter(Boolean);
         const pathChatId = pathSegments[0];
         
-        // Query param orqali ham tekshirib ko'ramiz (backward compatibility)
         const urlParams = new URLSearchParams(window.location.search);
         const queryChatId = urlParams.get('chat_id');
         
         const chatId = pathChatId || queryChatId || DEFAULT_CHAT_ID;
+        console.log("Identifying with Chat ID:", chatId);
         
         const response = await apiService.fetchUserByChatId(chatId);
         const userData = response.success ? response.data : (response as any);
@@ -60,7 +58,8 @@ const App: React.FC = () => {
           setAuthStatus('unauthorized');
         }
       } catch (err: any) {
-        setErrorMessage(err.message);
+        console.error("Initialization error:", err);
+        setErrorMessage(err.message || "Server bilan aloqa uzildi");
         setAuthStatus('error');
       }
     };
@@ -77,7 +76,7 @@ const App: React.FC = () => {
         setCategories(response.data.sort((a, b) => a.orderIndex - b.orderIndex));
       }
     } catch (err) {
-      console.error(err);
+      console.error("Categories load error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +108,7 @@ const App: React.FC = () => {
         loadCategories(currentParentId);
       }
     } catch (err) {
-      alert("Xato yuz berdi");
+      alert("Amalni bajarishda xatolik yuz berdi");
     }
   };
 
@@ -128,12 +127,33 @@ const App: React.FC = () => {
     );
   }
 
+  if (authStatus === 'error') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 text-center">
+        <div className="w-20 h-20 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-3xl flex items-center justify-center mb-6">
+          <WifiOff size={40} />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Ulanish xatosi</h1>
+        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm">
+          {errorMessage || "Backend serverga ulanib bo'lmadi. Iltimos, ngrok havolasini tekshiring."}
+        </p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all active:scale-95"
+        >
+          <RefreshCcw size={18} />
+          Qayta urinish
+        </button>
+      </div>
+    );
+  }
+
   if (authStatus === 'unauthorized') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 text-center">
         <ShieldAlert size={64} className="text-rose-500 mb-6" />
         <h1 className="text-2xl font-bold mb-2">Ruxsat yo'q</h1>
-        <p className="text-slate-500 mb-8 max-w-xs">Admin panelga kirish uchun maxsus linkdan foydalaning.</p>
+        <p className="text-slate-500 mb-8 max-w-xs">Ushbu chat_id uchun ruxsat topilmadi yoki status tasdiqlanmagan.</p>
         <button onClick={() => window.location.reload()} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Qayta yuklash</button>
       </div>
     );
@@ -142,7 +162,6 @@ const App: React.FC = () => {
   return (
     <Layout theme={theme} toggleTheme={toggleTheme} onLogout={() => window.location.reload()} currentUserFirstName={currentUser?.firstname}>
       <div className="flex flex-col gap-6">
-        {/* Breadcrumb & Header */}
         <div className="flex flex-col gap-4">
           <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400">
             <button onClick={() => navigateTo(null)} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
@@ -183,7 +202,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Content Area */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
@@ -199,7 +217,7 @@ const App: React.FC = () => {
                 onSelect={(id) => navigateTo(id, cat.nameUz)}
                 onEdit={(c) => { setEditingCategory(c); setIsModalOpen(true); }}
                 onDelete={async (id) => {
-                  if (confirm('O\'chirmoqchimisiz?')) {
+                  if (confirm('Ushbu kategoriyani o\'chirmoqchimisiz?')) {
                     const res = await apiService.deleteCategory(id);
                     if (res.success) loadCategories(currentParentId);
                   }
@@ -211,12 +229,11 @@ const App: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Package size={64} className="text-slate-200 dark:text-slate-800 mb-4" />
             <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300">Bo'limlar mavjud emas</h3>
-            <p className="text-sm text-slate-400">Yangi bo'lim yaratish uchun + tugmasini bosing</p>
+            <p className="text-sm text-slate-400">Yangi bo'lim yaratish uchun pastdagi + tugmasini bosing</p>
           </div>
         )}
       </div>
 
-      {/* Floating Action Button */}
       <button 
         onClick={() => { setEditingCategory(null); setIsModalOpen(true); }}
         className="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all z-50 border-4 border-white dark:border-slate-950"
