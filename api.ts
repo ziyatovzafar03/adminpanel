@@ -25,11 +25,18 @@ const getHeaders = (isMultipart = false) => {
 };
 
 const handleResponse = async (response: Response) => {
+  const data = await response.json().catch(() => null);
+  
   if (!response.ok) {
-    const errorBody = await response.text().catch(() => 'Noma\'lum xatolik');
-    throw new Error(`Server xatosi (${response.status}): ${errorBody}`);
+    const errorMsg = data?.messageUz || data?.message || `Server xatosi (${response.status})`;
+    throw new Error(errorMsg);
   }
-  return response.json();
+  
+  if (data && data.success === false) {
+    throw new Error(data.messageUz || data.message || "Noma'lum xatolik yuz berdi");
+  }
+  
+  return data;
 };
 
 export const apiService = {
@@ -68,7 +75,6 @@ export const apiService = {
     const response = await fetch(`${BASE_URL}/api/product/products-by-category-id/${categoryId}`, { headers: getHeaders() });
     return handleResponse(response);
   },
-  // Fix: Added missing createProduct method to apiService to resolve error in App.tsx
   async createProduct(data: any): Promise<ApiResponse<Product>> {
     const response = await fetch(`${BASE_URL}/api/product`, {
       method: 'POST',

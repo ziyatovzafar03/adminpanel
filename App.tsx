@@ -135,24 +135,58 @@ const App: React.FC = () => {
         loadData(currentParentId);
         showNotification(editingCategory ? "Kategoriya yangilandi" : "Kategoriya yaratildi");
       }
-    } catch (err) {
-      showNotification("Xatolik yuz berdi", "error");
+    } catch (err: any) {
+      showNotification(err.message || "Xatolik yuz berdi", "error");
     }
   };
 
   const handleProductSubmit = async (data: any) => {
+    setIsLoading(true);
     try {
-      const response = editingProduct 
-        ? await apiService.updateProduct(editingProduct.id, data)
-        : await apiService.createProduct(data);
-      if (response.success) {
-        setIsProductModalOpen(false);
-        setEditingProduct(null);
-        loadData(currentParentId);
-        showNotification(editingProduct ? "Mahsulot yangilandi" : "Mahsulot yaratildi");
+      if (editingProduct) {
+        // 1. Update product basic details
+        const editRequest = {
+          nameUz: data.nameUz, nameUzCyrillic: data.nameUzCyrillic, nameRu: data.nameRu, nameEn: data.nameEn,
+          descriptionUz: data.descriptionUz, descriptionUzCyrillic: data.descriptionUzCyrillic, descriptionRu: data.descriptionRu, descriptionEn: data.descriptionEn,
+          status: data.status, orderIndex: data.orderIndex,
+          discountType: data.discountType, discountValue: data.discountValue, 
+          discountStartAt: data.discountStartAt || null, discountEndAt: data.discountEndAt || null
+        };
+        await apiService.updateProduct(editingProduct.id, editRequest);
+
+        // 2. Sync Variants (Types)
+        // Note: For a real production app, we'd handle deletions too.
+        for (const type of data.types) {
+          if (type._isNew || type.id.startsWith('temp-')) {
+            await apiService.addProductType({
+              imgSize: type.imgSize, imgName: type.imgName, imageUrl: type.imageUrl,
+              nameUz: type.nameUz, nameUzCyrillic: type.nameUzCyrillic || type.nameUz, 
+              nameEn: type.nameEn || type.nameUz, nameRu: type.nameRu || type.nameUz,
+              price: type.price, stock: type.stock, productId: editingProduct.id
+            });
+          } else if (type._isModified) {
+            await apiService.updateProductType(type.id, {
+              imgSize: type.imgSize, imgName: type.imgName, imageUrl: type.imageUrl,
+              nameUz: type.nameUz, nameUzCyrillic: type.nameUzCyrillic || type.nameUz,
+              nameEn: type.nameEn || type.nameUz, nameRu: type.nameRu || type.nameUz,
+              price: type.price, stock: type.stock
+            });
+          }
+        }
+        showNotification("Mahsulot va variantlar saqlandi");
+      } else {
+        // Create new product
+        await apiService.createProduct(data);
+        showNotification("Yangi mahsulot yaratildi");
       }
-    } catch (err) {
-      showNotification("Xatolik yuz berdi", "error");
+      
+      setIsProductModalOpen(false);
+      setEditingProduct(null);
+      loadData(currentParentId);
+    } catch (err: any) {
+      showNotification(err.message || "Mahsulotni saqlashda xatolik", "error");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -166,8 +200,8 @@ const App: React.FC = () => {
         loadData(currentParentId);
         showNotification(`${confirmState.type === 'category' ? 'Kategoriya' : 'Mahsulot'} o'chirildi`);
       }
-    } catch (err) {
-      showNotification("O'chirishda xatolik", "error");
+    } catch (err: any) {
+      showNotification(err.message || "O'chirishda xatolik", "error");
     } finally {
       setConfirmState({ isOpen: false, id: null, type: 'category' });
     }
@@ -184,7 +218,7 @@ const App: React.FC = () => {
     <Layout theme={theme} toggleTheme={toggleTheme} onLogout={() => window.location.reload()} currentUserFirstName={currentUser?.firstname}>
       <Notification {...notification} onClose={() => setNotification(prev => ({ ...prev, isVisible: false }))} />
 
-      <div className="flex flex-col gap-6 sm:gap-10 max-w-6xl mx-auto">
+      <div className="flex flex-col gap-6 sm:gap-10 max-w-6xl mx-auto pb-24">
         <div className="flex flex-col gap-8">
           {/* Breadcrumbs */}
           <div ref={breadcrumbRef} className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-2 -mx-4 px-4 scroll-smooth">
@@ -213,7 +247,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-2">
                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                    {isLoading ? 'Yangilanmoqda' : `${filteredItems.length} ta ${viewMode === 'category' ? 'bo\'lim' : 'mahsulot'}`}
+                    {isLoading ? 'Yangilanmoqda...' : `${filteredItems.length} ta ${viewMode === 'category' ? 'bo\'lim' : 'mahsulot'}`}
                   </p>
                 </div>
               </div>
@@ -223,7 +257,7 @@ const App: React.FC = () => {
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
               <input 
                 type="text"
-                placeholder={`${viewMode === 'category' ? 'Kategoriyalarni' : 'Mahsulotlarni'} qidirish...`}
+                placeholder={`${viewMode === 'category' ? 'Bo\'limlar' : 'Mahsulotlar'}dan qidirish...`}
                 className="w-full pl-16 pr-6 py-5 rounded-[2.25rem] bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-sm font-bold shadow-glass placeholder:text-slate-300 uppercase tracking-wide"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -247,8 +281,8 @@ const App: React.FC = () => {
         ) : (
           <div className="flex flex-col items-center justify-center py-32 text-center bg-white/40 dark:bg-slate-900/40 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
             <Package size={64} className="text-slate-300 dark:text-slate-800 mb-6" />
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Hali Bo'sh</h3>
-            <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-[0.3em]">Yangi element qo'shish tugmasini bosing</p>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Ma'lumot topilmadi</h3>
+            <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-[0.3em]">Hali hech narsa qo'shilmagan</p>
           </div>
         )}
       </div>
