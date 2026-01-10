@@ -2,6 +2,8 @@
 export type Status = 'OPEN' | 'CLOSED' | 'DELETED';
 export type UserStatus = 'CONFIRMED' | 'PENDING' | 'REJECTED';
 export type DiscountType = 'PERCENT' | 'NONE' | 'FIXED';
+export type SellerStatus = 'TRIAL' | 'MONTHLY_PAID' | 'YEARLY_PAID' | 'EXPIRED';
+export type UserLanguage = 'UZBEK_LATIN' | 'UZBEK_CYRILLIC' | 'ENGLISH' | 'RUSSIAN';
 
 export interface Category {
   id: string;
@@ -12,6 +14,24 @@ export interface Category {
   orderIndex: number;
   status: 'OPEN' | 'CLOSED';
   parentId: string | null;
+}
+
+export interface Seller {
+  id: string;
+  firstname: string;
+  lastname: string;
+  username: string;
+  chatId: number;
+  lang: UserLanguage;
+  phone: string;
+  phoneTelegram?: string;
+  status: SellerStatus;
+  created: string;
+}
+
+export interface BotTokenData {
+  token: string;
+  username: string;
 }
 
 export interface ProductType {

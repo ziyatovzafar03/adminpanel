@@ -9,7 +9,9 @@ import {
   AddProductTypeRequest, 
   EditProductTypeRequest,
   UserAuthData,
-  Status
+  Status,
+  Seller,
+  BotTokenData
 } from './types';
 import { BASE_URL } from './consts';
 
@@ -75,6 +77,10 @@ export const apiService = {
     const response = await fetch(`${BASE_URL}/api/product/products-by-category-id/${categoryId}`, { headers: getHeaders() });
     return handleResponse(response);
   },
+  async getSellerByProductId(productId: string): Promise<ApiResponse<Seller>> {
+    const response = await fetch(`${BASE_URL}/api/product/get-seller-by-product-id?productId=${productId}`, { headers: getHeaders() });
+    return handleResponse(response);
+  },
   async createProduct(data: any): Promise<ApiResponse<Product>> {
     const response = await fetch(`${BASE_URL}/api/product`, {
       method: 'POST',
@@ -128,6 +134,12 @@ export const apiService = {
       method: 'DELETE',
       headers: getHeaders()
     });
+    return handleResponse(response);
+  },
+
+  // Bot & Token APIs
+  async getAdminBotToken(): Promise<ApiResponse<BotTokenData>> {
+    const response = await fetch(`${BASE_URL}/api/bot/get-admin-bot-token`, { headers: getHeaders() });
     return handleResponse(response);
   },
 

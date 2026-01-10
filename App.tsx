@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, ChevronRight, Home, Search, ShieldAlert, Package, LayoutGrid, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { Plus, ChevronRight, Home, Search, ShieldAlert, Package, LayoutGrid, ShoppingBag, ArrowLeft, Sparkles } from 'lucide-react';
 import { apiService } from './api';
 import { DEFAULT_CHAT_ID } from './consts';
 import { Category, Product, UserAuthData } from './types';
@@ -36,9 +36,7 @@ const App: React.FC = () => {
   const breadcrumbRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Always force dark mode
     document.documentElement.classList.add('dark');
-    document.documentElement.classList.remove('light');
   }, []);
 
   useEffect(() => {
@@ -52,10 +50,14 @@ const App: React.FC = () => {
   useEffect(() => {
     const initApp = async () => {
       try {
+        // Barqaror routing mantiqi: Path segments yoki Query params
         const urlParams = new URLSearchParams(window.location.search);
         const queryChatId = urlParams.get('chat_id');
+        
+        // Pathdan chat_id ni olish (masalan: /7882316826)
         const pathSegments = window.location.pathname.split('/').filter(s => s && s !== 'admin');
         const pathChatId = pathSegments[0];
+        
         const chatId = queryChatId || pathChatId || DEFAULT_CHAT_ID;
         
         const response = await apiService.fetchUserByChatId(chatId);
@@ -69,6 +71,7 @@ const App: React.FC = () => {
           setAuthStatus('unauthorized');
         }
       } catch (err) {
+        console.error("Auth error:", err);
         setAuthStatus('error');
       }
     };
@@ -212,7 +215,6 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // Redirect to the base path without credentials
     window.location.href = window.location.origin;
   };
 
@@ -220,24 +222,27 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-8">
         <div className="relative mb-8">
-          <div className="w-20 h-20 border-4 border-indigo-900/30 rounded-full"></div>
-          <div className="absolute top-0 left-0 w-20 h-20 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+          <div className="w-24 h-24 border-8 border-indigo-900/20 rounded-full"></div>
+          <div className="absolute top-0 left-0 w-24 h-24 border-8 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center text-indigo-500">
+            <Sparkles size={32} className="animate-pulse" />
+          </div>
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 animate-pulse">Platformaga kirish...</p>
+        <p className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-500 animate-pulse">Yuklanmoqda...</p>
       </div>
     );
   }
 
-  if (authStatus === 'unauthorized') {
+  if (authStatus === 'unauthorized' || authStatus === 'error') {
     return (
       <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 text-white">
-        <div className="w-full max-w-sm bg-slate-900 rounded-[3rem] p-10 text-center shadow-2xl border border-slate-800">
-          <div className="w-24 h-24 mx-auto mb-8 rounded-[2rem] bg-rose-950/20 flex items-center justify-center text-rose-500 shadow-lg">
-            <ShieldAlert size={48} strokeWidth={2.5} />
+        <div className="w-full max-w-sm bg-slate-900/50 backdrop-blur-xl rounded-[4rem] p-12 text-center shadow-2xl border border-white/5">
+          <div className="w-24 h-24 mx-auto mb-10 rounded-[2.5rem] bg-rose-500/10 flex items-center justify-center text-rose-500 shadow-inner">
+            <ShieldAlert size={56} strokeWidth={1.5} />
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-tight mb-4">Kirish taqiqlangan</h2>
-          <p className="text-slate-400 text-sm font-medium leading-relaxed mb-8">Sizda ushbu dashboard'dan foydalanish uchun ruxsat yo'q yoki havola eskirgan.</p>
-          <button onClick={() => window.location.reload()} className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all">Qayta urinish</button>
+          <h2 className="text-3xl font-black uppercase tracking-tighter mb-4">Kirish rad etildi</h2>
+          <p className="text-slate-500 text-sm font-medium leading-relaxed mb-10">Havola noto'g'ri yoki sizga ruxsat berilmagan. Iltimos, qayta urinib ko'ring.</p>
+          <button onClick={() => window.location.reload()} className="w-full py-5 bg-white text-slate-950 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all">Qayta yuklash</button>
         </div>
       </div>
     );
@@ -245,8 +250,6 @@ const App: React.FC = () => {
 
   const filteredCategories = categories.filter(c => c.nameUz.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredProducts = products.filter(p => p.nameUz.toLowerCase().includes(searchQuery.toLowerCase()));
-
-  // Construct full name for header
   const fullName = currentUser ? `${currentUser.firstname || ''} ${currentUser.lastname || ''}`.trim() : 'Admin';
 
   return (
@@ -255,22 +258,22 @@ const App: React.FC = () => {
       onLogout={handleLogout}
       currentUserName={fullName || 'Admin'}
     >
-      <div className="max-w-6xl mx-auto space-y-10 pb-32">
+      <div className="max-w-6xl mx-auto space-y-12 pb-32">
         {/* Navigation & Header */}
-        <div className="flex flex-col gap-8">
-          <div ref={breadcrumbRef} className="flex items-center gap-3 overflow-x-auto hide-scrollbar py-2 -mx-4 px-4 scroll-smooth">
-            <button onClick={() => navigateTo(null)} className="flex-shrink-0 w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800/50 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all shadow-sm active:scale-90">
-              <Home size={20} />
+        <div className="flex flex-col gap-10">
+          <div ref={breadcrumbRef} className="flex items-center gap-4 overflow-x-auto hide-scrollbar py-4 -mx-4 px-4 scroll-smooth">
+            <button onClick={() => navigateTo(null)} className="flex-shrink-0 w-14 h-14 rounded-[1.75rem] bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-indigo-400 transition-all shadow-xl active:scale-90">
+              <Home size={22} />
             </button>
             {breadcrumb.map((b, i) => (
               <React.Fragment key={b.id}>
-                <ChevronRight size={14} className="text-slate-700 flex-shrink-0" />
+                <ChevronRight size={16} className="text-slate-800 flex-shrink-0" />
                 <button 
                   onClick={() => navigateTo(b.id, b.name)}
-                  className={`flex-shrink-0 px-6 py-3 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 ${
+                  className={`flex-shrink-0 px-8 py-4 rounded-[1.75rem] border transition-all text-[11px] font-black uppercase tracking-widest shadow-2xl active:scale-95 ${
                     i === breadcrumb.length - 1 
-                    ? 'bg-indigo-600 border-indigo-500 text-white' 
-                    : 'bg-slate-900 border-slate-800/50 text-slate-500'
+                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-indigo-500/20' 
+                    : 'bg-slate-900 border-white/5 text-slate-500'
                   }`}
                 >
                   {b.name}
@@ -279,28 +282,32 @@ const App: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-[1.75rem] flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                {viewMode === 'category' ? <LayoutGrid size={32} /> : <ShoppingBag size={32} />}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-[2.25rem] flex items-center justify-center shadow-2xl shadow-indigo-500/30 ring-8 ring-indigo-500/5">
+                {viewMode === 'category' ? <LayoutGrid size={36} /> : <ShoppingBag size={36} />}
               </div>
               <div>
-                <h2 className="text-3xl font-black text-white uppercase tracking-tight leading-none mb-1.5">
+                <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none mb-2">
                   {breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Katalog'}
                 </h2>
-                <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                  {isLoading ? 'Yuklanmoqda...' : `${viewMode === 'category' ? filteredCategories.length : filteredProducts.length} ta element`}
-                </p>
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1 bg-indigo-500/10 rounded-lg flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                      {isLoading ? 'Yangilanmoqda' : `${viewMode === 'category' ? filteredCategories.length : filteredProducts.length} TA ELEMENT`}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="relative group flex-1 max-w-md">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+            <div className="relative group flex-1 max-w-lg">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors" size={24} />
               <input 
                 type="text"
-                placeholder="Qidirish..."
-                className="w-full pl-14 pr-6 py-5 bg-slate-900/70 backdrop-blur-xl border border-slate-800/50 rounded-3xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-sm font-bold shadow-sm text-white"
+                placeholder="Nomi bo'yicha qidirish..."
+                className="w-full pl-16 pr-8 py-6 bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-[2.5rem] outline-none focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-base font-bold shadow-2xl text-white placeholder:text-slate-600"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -310,30 +317,36 @@ const App: React.FC = () => {
 
         {/* Content */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-80 bg-slate-900/40 border border-slate-800/30 rounded-[3rem] animate-pulse"></div>
+              <div key={i} className="h-96 bg-slate-900/30 border border-white/5 rounded-[4rem] animate-pulse"></div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
             {viewMode === 'category' ? (
               filteredCategories.map(cat => (
                 <CategoryCard key={cat.id} category={cat} onSelect={(id) => navigateTo(id, cat.nameUz)} onEdit={(c) => { setEditingCategory(c); setIsCategoryModalOpen(true); }} onDelete={(id) => setConfirmState({ isOpen: true, id, type: 'category' })} />
               ))
             ) : (
               filteredProducts.map(prod => (
-                <ProductCard key={prod.id} product={prod} onEdit={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }} onDelete={(id) => setConfirmState({ isOpen: true, id, type: 'product' })} />
+                <ProductCard 
+                  key={prod.id} 
+                  product={prod} 
+                  currentUserChatId={currentUser?.chatId}
+                  onEdit={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }} 
+                  onDelete={(id) => setConfirmState({ isOpen: true, id, type: 'product' })} 
+                />
               ))
             )}
           </div>
         )}
 
         {(viewMode === 'category' ? filteredCategories.length === 0 : filteredProducts.length === 0) && !isLoading && (
-          <div className="flex flex-col items-center justify-center py-32 text-center bg-slate-900/30 border-2 border-dashed border-slate-800/50 rounded-[4rem]">
-            <Package size={80} strokeWidth={1} className="text-slate-800 mb-8" />
-            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Hech narsa topilmadi</h3>
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest italic">Yangi ma'lumot qo'shish uchun + tugmasini bosing</p>
+          <div className="flex flex-col items-center justify-center py-40 text-center bg-slate-900/20 border-4 border-dashed border-white/5 rounded-[5rem] backdrop-blur-sm">
+            <Package size={96} strokeWidth={1} className="text-slate-800 mb-10" />
+            <h3 className="text-3xl font-black text-white uppercase tracking-tight mb-3">Ma'lumot topilmadi</h3>
+            <p className="text-[11px] font-black text-slate-600 uppercase tracking-[0.3em] italic">Yangi ma'lumot qo'shish uchun + tugmasini bosing</p>
           </div>
         )}
       </div>
@@ -343,9 +356,10 @@ const App: React.FC = () => {
           if (viewMode === 'category') { setEditingCategory(null); setIsCategoryModalOpen(true); }
           else { setEditingProduct(null); setIsProductModalOpen(true); }
         }}
-        className="fixed bottom-10 right-8 w-20 h-20 bg-white text-slate-900 rounded-[2.25rem] flex items-center justify-center shadow-2xl active:scale-90 active:rotate-12 transition-all z-[150] border-4 border-slate-950 group"
+        className="fixed bottom-12 right-10 w-24 h-24 bg-white text-slate-950 rounded-[2.5rem] flex items-center justify-center shadow-[0_20px_60px_-15px_rgba(255,255,255,0.3)] active:scale-90 active:rotate-12 transition-all z-[150] border-[6px] border-[#020617] group overflow-hidden"
       >
-        <Plus size={36} strokeWidth={3} className="group-hover:scale-110 transition-transform" />
+        <div className="absolute inset-0 bg-indigo-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+        <Plus size={44} strokeWidth={3} className="relative z-10 group-hover:text-white transition-colors duration-300" />
       </button>
 
       {breadcrumb.length > 0 && (
@@ -354,15 +368,15 @@ const App: React.FC = () => {
             const parent = breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2] : { id: null, name: 'Asosiy' };
             navigateTo(parent.id, parent.name);
           }}
-          className="fixed bottom-10 left-8 w-16 h-16 bg-slate-900/80 backdrop-blur-xl text-white rounded-[1.75rem] flex items-center justify-center shadow-xl border border-slate-800/50 active:scale-90 z-[150]"
+          className="fixed bottom-12 left-10 w-20 h-20 bg-slate-900/80 backdrop-blur-2xl text-white rounded-[2rem] flex items-center justify-center shadow-2xl border border-white/5 active:scale-90 z-[150]"
         >
-          <ArrowLeft size={24} strokeWidth={2.5} />
+          <ArrowLeft size={32} strokeWidth={2} />
         </button>
       )}
 
       <CategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onSubmit={handleCategorySubmit} initialData={editingCategory} parentId={currentParentId} />
       <ProductModal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} onSubmit={handleProductSubmit} initialData={editingProduct} categoryId={currentParentId || ''} />
-      <ConfirmModal isOpen={confirmState.isOpen} title="O'chirishni tasdiqlang" message={`Ushbu ${confirmState.type === 'category' ? 'bo\'lim' : 'mahsulot'} va unga tegishli barcha ma'lumotlar o'chiriladi.`} onConfirm={handleDeleteConfirmed} onCancel={() => setConfirmState({ isOpen: false, id: null, type: 'category' })} />
+      <ConfirmModal isOpen={confirmState.isOpen} title="O'chirishni tasdiqlang" message={`Ushbu ${confirmState.type === 'category' ? 'bo\'lim' : 'mahsulot'} va unga tegishli barcha ma'lumotlar butunlay o'chiriladi.`} onConfirm={handleDeleteConfirmed} onCancel={() => setConfirmState({ isOpen: false, id: null, type: 'category' })} />
       <Notification {...notification} onClose={() => setNotification(prev => ({ ...prev, isVisible: false }))} />
     </Layout>
   );
